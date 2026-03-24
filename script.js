@@ -109,9 +109,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     initFullscreenLongPress();
     initDarkMode();
     initAppTheme(); // Initialize custom theme
+    initSidebarGestures();
 
     document.body.classList.add('on-home-page'); // Default to home page
-
+    
     // Auto-collapse sidebar on mobile devices
     if (window.innerWidth <= 768) {
         document.body.classList.add('sidebar-collapsed');
@@ -5806,6 +5807,61 @@ window.executeImportAppData = async function () {
         closeImportModal();
     }
 };
+
+// --- Sidebar Swipe Gestures ---
+function initSidebarGestures() {
+    const toggleBtn = document.getElementById('floating-sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (!toggleBtn || !sidebar) return;
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const threshold = 50; // minimum distance for a swipe in pixels
+
+    // 1. Open sidebar: Swipe LEFT on the toggle button (towards the screen center)
+    toggleBtn.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    toggleBtn.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleToggleSwipe();
+    }, { passive: true });
+
+    function handleToggleSwipe() {
+        // swipe logic: touchStartX - touchEndX > threshold means move LEFT
+        if (touchStartX - touchEndX > threshold) {
+            if (document.body.classList.contains('sidebar-collapsed')) {
+                window.toggleSidebar();
+            }
+        }
+    }
+
+    // 2. Close sidebar: Swipe RIGHT inside the sidebar or on the overlay
+    const closeTargets = [sidebar, overlay].filter(el => el !== null);
+    
+    closeTargets.forEach(target => {
+        target.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        target.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSidebarSwipe();
+        }, { passive: true });
+    });
+
+    function handleSidebarSwipe() {
+        // swipe logic: touchEndX - touchStartX > threshold means move RIGHT
+        if (touchEndX - touchStartX > threshold) {
+            if (!document.body.classList.contains('sidebar-collapsed')) {
+                window.toggleSidebar();
+            }
+        }
+    }
+}
 
 // --- Theme Management logic ---
 const appThemes = [
