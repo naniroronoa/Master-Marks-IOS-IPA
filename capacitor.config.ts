@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.mastermarks.app',
-  appName: 'Master_Marks',
+  appName: 'Master Marks',
   webDir: 'www'
 };
 

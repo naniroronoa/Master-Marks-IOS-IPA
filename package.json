@@ -10,6 +10,7 @@
         "build:keygen": "electron-builder --config electron-builder-keygen.json"
     },
     "devDependencies": {
+        "@capacitor/assets": "^3.0.5",
         "@capacitor/cli": "^8.2.0",
         "@capacitor/core": "^8.2.0",
         "@capacitor/ios": "^8.2.0",

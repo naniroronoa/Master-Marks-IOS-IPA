@@ -7,7 +7,7 @@ set GH="C:\Program Files\GitHub CLI\gh.exe"
 :: !IMPORTANT! Change this to your GitHub repository (e.g., username/repo-name)
 set REPO=naniroronoa/Master-Marks-IOS-IPA
 set BRANCH=master
-set OUTPUT_DIR=%~dp0IOS
+set OUTPUT_DIR=%~dp0App-IPA
 set APP_NAME=Master_Marks
 
 echo ===========================================
@@ -34,8 +34,15 @@ copy /Y activation-system.js www\activation-system.js > nul 2>&1
 echo [OK] Web assets ready.
 echo.
 
-:: === Step 2: Capacitor Sync ===
-echo [2/6] Synchronizing Capacitor iOS project...
+:: === Step 2: Generate Icons ===
+echo [2/6] Generating app icons...
+if not exist "assets\splash.png" copy "assets\icon.png" "assets\splash.png" > nul 2>&1
+call npx @capacitor/assets generate --ios > nul 2>&1
+echo [OK] Icons generated.
+echo.
+
+:: === Step 3: Capacitor Sync ===
+echo [3/6] Synchronizing Capacitor iOS project...
 call npx cap sync ios
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Capacitor sync failed.
@@ -44,8 +51,8 @@ if %ERRORLEVEL% NEQ 0 (
 echo [OK] Capacitor sync done.
 echo.
 
-:: === Step 3: Git Push to GitHub ===
-echo [3/6] Pushing to GitHub to trigger the build...
+:: === Step 4: Git Push to GitHub ===
+echo [4/6] Pushing to GitHub to trigger the build...
 %GIT% add .
 %GIT% commit -m "Build %APP_NAME% v!VERSION!" --allow-empty
 %GIT% push origin %BRANCH% --force
@@ -57,8 +64,8 @@ if %ERRORLEVEL% NEQ 0 (
 echo [OK] Code pushed to GitHub. Build triggered!
 echo.
 
-:: === Step 4: Wait for GitHub Actions Build ===
-echo [4/6] Waiting for GitHub Actions to finish building...
+:: === Step 5: Wait for GitHub Actions Build ===
+echo [5/6] Waiting for GitHub Actions to finish building...
 echo       (This takes about 2-3 minutes...)
 echo.
 
@@ -85,8 +92,8 @@ if "%BUILD_RESULT%"=="success" (
 )
 echo.
 
-:: === Step 5: Download IPA ===
-echo [5/6] Finalizing: Downloading IPA to IOS folder...
+:: === Step 6: Download IPA ===
+echo [6/6] Finalizing: Downloading IPA to App-IPA folder...
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 %GH% run list --repo %REPO% --limit 1 --json databaseId --jq ".[0].databaseId" > %TEMP%\gh_run_id.txt 2>&1
@@ -108,7 +115,7 @@ rmdir /s /q "%TEMP_DOWNLOAD%"
 echo [OK] Saved as: %OUTPUT_DIR%\!FINAL_NAME!
 echo.
 echo ===========================================
-echo   SUCCESS! v!VERSION! is ready in IOS folder.
+echo   SUCCESS! v!VERSION! is ready in App-IPA folder.
 echo ===========================================
 echo.
 start "" "%OUTPUT_DIR%"
