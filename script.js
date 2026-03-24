@@ -5550,8 +5550,38 @@ window.executeWordDownload = async function () {
 
     // Use html-docx-js to create a real .docx if available (required for iOS Word to open it)
     if (typeof htmlDocx !== 'undefined') {
-        blob = htmlDocx.asBlob(html);
-        filename = filename.replace(/\.doc$/, '.docx');
+        try {
+            // iOS Word strictly rejects corrupted XML. The spoofed MSO namespaces in the raw HTML
+            // can cause html-docx-js to generate invalid .docx files. We sanitize it first.
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // 1. Remove MSO namespaces which confuse the OOXML parser
+            doc.documentElement.removeAttribute('xmlns:o');
+            doc.documentElement.removeAttribute('xmlns:w');
+            doc.documentElement.removeAttribute('xmlns');
+            
+            // 2. Ensure images have proper styling for Word
+            const images = doc.querySelectorAll('img');
+            images.forEach(img => {
+                if (!img.style.width && img.width) img.style.width = img.width + 'px';
+                if (!img.style.height && img.height) img.style.height = img.height + 'px';
+            });
+
+            // 3. Remove @page CSS which might cause parsing issues
+            const styles = doc.querySelectorAll('style');
+            styles.forEach(s => {
+                s.innerHTML = s.innerHTML.replace(/@page\s*{[^}]*}/g, '');
+                s.innerHTML = s.innerHTML.replace(/div\.Section1\s*{[^}]*}/g, '');
+            });
+
+            const cleanHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+            blob = htmlDocx.asBlob(cleanHtml);
+            filename = filename.replace(/\.doc$/, '.docx');
+        } catch (e) {
+            console.error("HTML to Docx sanitization failed, falling back to basic doc:", e);
+            blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+        }
     } else {
         blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     }
