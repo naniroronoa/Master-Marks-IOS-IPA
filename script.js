@@ -5401,11 +5401,16 @@ window.exportDigitizationExcel = async function () {
             }
             return;
         }
+        // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const isNativeHandled = await window.saveAndShareWithCapacitor(finalFileName, blob);
+        if (isNativeHandled) {
+            return;
+        }
 
         // --- Fallback: browser-style download ---
         try {
             if (window.showSaveFilePicker) {
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const handle = await window.showSaveFilePicker({
                     suggestedName: finalFileName,
                     types: [{
@@ -5431,7 +5436,6 @@ window.exportDigitizationExcel = async function () {
         }
 
         // Traditional fallback if showSaveFilePicker is not supported
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -5501,12 +5505,57 @@ window.closeWordPreview = function () {
     document.body.classList.remove('modal-open');
 };
 
+window.saveAndShareWithCapacitor = async function(fileName, blob) {
+    if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Filesystem || !window.Capacitor.Plugins.Share) {
+        return false;
+    }
+    
+    try {
+        const { Filesystem, Share } = window.Capacitor.Plugins;
+        
+        // Convert Blob to Base64
+        const base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+        
+        // Save temporary file
+        const savedFile = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: 'CACHE'
+        });
+        
+        // Trigger native Share Sheet
+        await Share.share({
+            title: fileName,
+            url: savedFile.uri,
+            dialogTitle: 'اختر مكان حفظ الملف'
+        });
+        
+        return true;
+    } catch (e) {
+        console.error("Capacitor Native Save/Share Error:", e);
+        return false;
+    }
+};
+
 window.executeWordDownload = async function () {
     if (!currentWordExportData.html) return;
 
     const { html, filename } = currentWordExportData;
 
-    // --- Try Electron save dialog first ---
+    // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const isNativeHandled = await window.saveAndShareWithCapacitor(filename, blob);
+    if (isNativeHandled) {
+        closeWordPreview();
+        return;
+    }
+
+    // --- Try Electron save dialog next ---
     if (window.electronAPI && window.electronAPI.saveFile) {
         // Convert HTML string to something Electron can handle as a buffer
         // Note: We include the BOM \ufeff for Word encoding
@@ -5716,10 +5765,16 @@ window.exportAppData = async function () {
             return;
         }
 
+        // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const isNativeHandled = await window.saveAndShareWithCapacitor(filename, blob);
+        if (isNativeHandled) {
+            return;
+        }
+
         // --- Fallback: browser-style download ---
         try {
             if (window.showSaveFilePicker) {
-                const blob = new Blob([dataStr], { type: 'application/json' });
                 const handle = await window.showSaveFilePicker({
                     suggestedName: filename,
                     types: [{
@@ -5744,7 +5799,6 @@ window.exportAppData = async function () {
             return;
         }
 
-        const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
 
