@@ -1,6 +1,6 @@
 {
     "name": "master-marks",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "author": "Professor TLILI Mohamed Lamine",
     "description": "Master-Marks - Official Version",
     "main": "electron-main.js",

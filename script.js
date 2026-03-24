@@ -5545,10 +5545,18 @@ window.saveAndShareWithCapacitor = async function(fileName, blob) {
 window.executeWordDownload = async function () {
     if (!currentWordExportData.html) return;
 
-    const { html, filename } = currentWordExportData;
+    let { html, filename } = currentWordExportData;
+    let blob;
+
+    // Use html-docx-js to create a real .docx if available (required for iOS Word to open it)
+    if (typeof htmlDocx !== 'undefined') {
+        blob = htmlDocx.asBlob(html);
+        filename = filename.replace(/\.doc$/, '.docx');
+    } else {
+        blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    }
 
     // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const isNativeHandled = await window.saveAndShareWithCapacitor(filename, blob);
     if (isNativeHandled) {
         closeWordPreview();
@@ -5581,12 +5589,11 @@ window.executeWordDownload = async function () {
     // --- Fallback: browser-style download ---
     try {
         if (window.showSaveFilePicker) {
-            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
             const handle = await window.showSaveFilePicker({
                 suggestedName: filename,
                 types: [{
                     description: 'Word Document',
-                    accept: {'application/msword': ['.doc']}
+                    accept: {'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'], 'application/msword': ['.doc']}
                 }]
             });
             
@@ -5613,7 +5620,6 @@ window.executeWordDownload = async function () {
     showDownloadNotification();
 
     setTimeout(() => {
-        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
