@@ -1,0 +1,955 @@
+/* ... Previous Variables ... */
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --secondary-color: #10b981;
+    --bg-color: #f3f4f6;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-color: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --sidebar-width: 280px;
+    --font-family: 'Tajawal', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    direction: rtl;
+    overflow-x: hidden;
+}
+
+/* App Layout */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: var(--sidebar-width);
+    background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    padding: 1.5rem;
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo i {
+    font-size: 2rem;
+    color: var(--secondary-color);
+}
+
+.sidebar nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 1rem;
+    text-align: right;
+    font-family: var(--font-family);
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateX(-5px);
+}
+
+.nav-btn i {
+    width: 25px;
+    text-align: center;
+}
+
+.footer-info {
+    font-size: 0.9rem;
+    opacity: 0.6;
+    text-align: center;
+    margin-top: auto;
+}
+
+/* Main Content */
+.main-content {
+    margin-right: var(--sidebar-width);
+    flex: 1;
+    padding: 2rem;
+    width: calc(100% - var(--sidebar-width));
+}
+
+/* Trimester Tabs */
+.trimester-tabs-container .nav-btn {
+    background-color: #e2e8f0;
+    /* Darker default for visibility */
+    color: #475569;
+    font-weight: bold;
+    border: 1px solid #cbd5e1;
+}
+
+.trimester-tabs-container .nav-btn:hover {
+    background-color: #cbd5e1;
+}
+
+.active-trim {
+    background-color: var(--secondary-color) !important;
+    /* Distinct color for active trim */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Submenu */
+.sidebar-submenu {
+    background: rgba(0, 0, 0, 0.2);
+    margin: 0.5rem 0;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+.sidebar-submenu.hidden {
+    display: none;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.submenu-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.submenu-group label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+}
+
+.submenu-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 150px;
+    overflow-y: auto;
+    padding-left: 0.5rem;
+}
+
+.submenu-list li {
+    padding: 0.5rem 0.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.3rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.submenu-list li:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.submenu-list li.active {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.trimester-select-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.sub-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.4rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.sub-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.sub-btn.active-trim {
+    background: var(--secondary-color) !important;
+    border-color: var(--secondary-color);
+}
+
+/* Monitoring Table */
+.monitoring-table th,
+.monitoring-table td {
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid var(--border-color);
+    background-color: #f8fafc;
+    font-size: 0.9rem;
+}
+
+.monitoring-table th {
+    background-color: rgba(79, 70, 229, 0.05);
+    /* Matching Continuous style */
+    color: var(--primary-color);
+}
+
+.monitoring-table td input {
+    width: 100%;
+    text-align: center;
+    padding: 0.2rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.monitoring-table td input:focus {
+    border-color: var(--primary-color);
+    background-color: #fff;
+}
+
+.monitoring-table tr:hover td input {
+    background-color: #f1f5f9;
+}
+
+/* Sections */
+.section {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.active-section {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header Cards */
+/* Header Cards (Global Purple Style) */
+.header-card {
+    background: linear-gradient(135deg, #5b50e5, #8b5cf6);
+    /* Blurple/Purple gradient */
+    color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.header-card h1 {
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 2.2rem;
+}
+
+/* Redesigned Header for Continuous Assessment */
+.continuous-header {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 2rem;
+}
+
+.header-top-row {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-title-small {
+    font-size: 1.2rem !important;
+    margin: 0 !important;
+    opacity: 0.9;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.teacher-info-header {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem 2.5rem;
+    border-radius: 1rem;
+    font-size: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: fit-content;
+    max-width: 95%;
+    margin: 0 auto 1.5rem auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.info-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.info-label {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Cards & Forms (Reusing previous styles) */
+.card {
+    background: var(--card-bg);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-family: var(--font-family);
+    font-size: 1rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: var(--text-muted);
+    color: white;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabs */
+.tabs-scroll {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+    /* More padding for scroll bar */
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tab-btn {
+    padding: 0.8rem 2rem;
+    /* Larger buttons globally */
+    border: none;
+    background: white;
+    /* White background by default */
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    /* Larger font */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Default shadow */
+    color: #475569;
+    /* Default text color */
+}
+
+/* Distinct Colors for Class Tabs */
+.tab-btn:nth-child(4n+1) {
+    border-top: 4px solid #3b82f6;
+}
+
+.tab-btn:nth-child(4n+2) {
+    border-top: 4px solid #10b981;
+}
+
+.tab-btn:nth-child(4n+3) {
+    border-top: 4px solid #f59e0b;
+}
+
+.tab-btn:nth-child(4n+4) {
+    border-top: 4px solid #8b5cf6;
+}
+
+.tab-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    /* Override colored border */
+}
+
+
+
+/* Tables */
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th,
+td {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: rgba(79, 70, 229, 0.05);
+    color: var(--primary-color);
+}
+
+tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Student List Specifics */
+/* Student List Specifics */
+/* Column widths are now handled inline in HTML for flexibility across sections */
+
+.students-list-table input {
+    width: 100%;
+    /* Full width of cell */
+    text-align: right;
+    padding: 0.5rem;
+}
+
+/* Continuous Assessment Table Styling */
+.continuous-table td {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+    border-right: 1px solid var(--border-color);
+}
+
+.continuous-table th {
+    border-right: 1px solid var(--border-color);
+}
+
+.continuous-table input[type="number"],
+.continuous-table input[type="text"] {
+    min-width: 40px;
+    width: 40px;
+    text-align: center;
+    font-size: 0.95rem;
+    padding: 0.4rem;
+}
+
+/* Hide spinner arrows for number inputs in continuous table */
+.continuous-table input[type="number"]::-webkit-outer-spin-button,
+.continuous-table input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.continuous-table input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: none;
+}
+
+/* Hide spinner arrows for number inputs in monitoring table */
+.monitoring-table input[type="number"]::-webkit-outer-spin-button,
+.monitoring-table input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.monitoring-table input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: none;
+}
+
+/* Grading Table Layout Refinements */
+#gradingTable th:nth-child(2),
+#gradingTable td:nth-child(2) {
+    width: 300px;
+    min-width: 250px;
+    text-align: right;
+    padding-right: 1.5rem;
+}
+
+#gradingTable input[type="number"],
+#gradingTable th:nth-child(3),
+#gradingTable th:nth-child(4),
+#gradingTable th:nth-child(5),
+#gradingTable th:nth-child(6),
+#gradingTable th:nth-child(7),
+#gradingTable td.bg-gray-50,
+#gradingTable td.avg-cell {
+    width: 75px;
+    min-width: 75px;
+    text-align: center;
+}
+
+#gradingTable input[type="number"] {
+    padding: 0.4rem;
+    font-size: 1rem;
+}
+
+#gradingTable td.appr-cell,
+#gradingTable th:nth-child(9) {
+    width: 280px;
+    min-width: 200px;
+    text-align: right;
+    padding-right: 1rem;
+}
+
+/* Separation and Spinner Cleanup for Grading */
+#gradingTable th,
+#gradingTable td {
+    border-left: 1px solid var(--border-color);
+}
+
+#gradingTable th:first-child,
+#gradingTable td:first-child {
+    border-right: 1px solid var(--border-color);
+}
+
+/* Hide input spinners specifically for grading */
+#gradingTable input[type="number"]::-webkit-outer-spin-button,
+#gradingTable input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#gradingTable input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: none;
+}
+
+.vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.3rem !important;
+    min-height: 120px;
+}
+
+.students-list-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Edit Mode & Drag Drop */
+.read-only-mode input {
+    pointer-events: none;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit;
+    font-weight: 500;
+}
+
+.edit-mode input {
+    border: 1px solid var(--primary-color) !important;
+    background: white !important;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.table-controls {
+    padding: 0.5rem 0;
+}
+
+.draggable-row {
+    cursor: grab;
+}
+
+.draggable-row.dragging {
+    opacity: 0.5;
+    background: #eef2ff;
+}
+
+.draggable-row:active {
+    cursor: grabbing;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+textarea.import-area {
+    width: 100%;
+    height: 200px;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-family: monospace;
+    margin-top: 1rem;
+    direction: ltr;
+    /* Better for data paste */
+}
+
+/* Stats Modal Specifics */
+.stats-modal-content {
+    max-width: 800px;
+}
+
+.stats-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.stats-grid-table th,
+.stats-grid-table td {
+    border: 1px solid var(--border-color);
+    padding: 0.8rem;
+    text-align: center;
+}
+
+.stats-grid-table th {
+    background-color: #f8fafc;
+    color: var(--primary-color);
+}
+
+.averages-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.avg-box {
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.avg-box span {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.avg-box strong {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+
+/* Badges */
+.info-badges {
+    display: flex;
+    gap: 1rem;
+}
+
+.badge {
+    background: #e0e7ff;
+    color: var(--primary-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.9rem;
+}
+
+/* Score Colors */
+.score-good {
+    color: var(--secondary-color);
+    font-weight: bold;
+}
+
+.score-bad {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+.score-average {
+    color: var(--warning-color);
+    font-weight: bold;
+}
+
+/* Conditional Formatting for Grading Notebook */
+.avg-critical {
+    color: var(--danger-color) !important;
+}
+
+.avg-warning {
+    color: #f97316 !important;
+    /* Orange */
+}
+
+.avg-excellent {
+    color: var(--secondary-color) !important;
+    /* Green */
+}
+
+.input-error {
+    background-color: #fef2f2 !important;
+    /* Light red */
+    color: var(--danger-color) !important;
+    /* Dark red */
+    border: 1px solid var(--danger-color) !important;
+    font-weight: bold;
+}
+
+/* Print Styles */
+@media print {
+
+    .sidebar,
+    .actions,
+    .table-controls,
+    .no-print {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-right: 0;
+        width: 100%;
+        padding: 0;
+    }
+
+    .section {
+        display: none;
+    }
+
+    .active-section {
+        display: block;
+    }
+
+    .card,
+    .header-card {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        margin-bottom: 1rem;
+        background: transparent;
+        color: black;
+    }
+
+    header,
+    .header-card {
+        background: white;
+        color: black;
+        border-bottom: 2px solid black;
+    }
+
+    body {
+        background: white;
+    }
+
+    input {
+        border: none !important;
+    }
+
+    /* Ensure tables break cleanly */
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Stats Modal Print Overrides */
+    body.stats-view-active .app-container {
+        display: none !important;
+    }
+
+    body.stats-view-active .modal-overlay {
+        position: static;
+        display: block !important;
+        opacity: 1 !important;
+        background: white !important;
+        pointer-events: none;
+        z-index: auto;
+    }
+
+    body.stats-view-active .modal-content {
+        box-shadow: none;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    body.stats-view-active .modal-actions {
+        display: none !important;
+    }
+
+    body.stats-view-active .stats-modal-content {
+        padding: 0;
+    }
+}
+
+/* Student Lists Header Styling (Matching User Image) - REMOVED (Merged into Global .header-card) */
+/* Global Tab Container Centering & Spacing */
+.class-tabs-container,
+.tabs-scroll {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    /* Ensure gap applies to both container types */
+    padding: 1rem 0;
+    border-bottom: none;
+    flex-wrap: wrap;
+    /* Allow wrapping if many classes */
+}
+
+/* Specific overrides if needed, but the above should cover it */
+#student-lists-section .tabs-scroll {
+    padding-bottom: 0;
+}

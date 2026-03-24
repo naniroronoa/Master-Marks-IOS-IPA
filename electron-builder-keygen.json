@@ -1,0 +1,40 @@
+{
+    "appId": "com.teacher.scorebook.keygen",
+    "productName": "Control Panel - Key Generator",
+    "directories": {
+        "output": "Keygen-win"
+    },
+    "files": [
+        "keygen.html",
+        "keygen.js",
+        "electron-main-keygen.js",
+        "preload.js",
+        "assets/**"
+    ],
+    "extraMetadata": {
+        "main": "electron-main-keygen.js"
+    },
+    "win": {
+        "target": [
+            "nsis",
+            "portable",
+            "msi"
+        ],
+        "icon": "assets/icon1.ico"
+    },
+    "msi": {
+        "oneClick": false,
+        "perMachine": true,
+        "shortcutName": "Control Panel - Key Generator",
+        "runAfterFinish": true,
+        "warningsAsErrors": false
+    },
+    "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "createDesktopShortcut": true,
+        "createStartMenuShortcut": true,
+        "shortcutName": "Control Panel - Key Generator",
+        "installerIcon": "assets/icon1.ico"
+    }
+}

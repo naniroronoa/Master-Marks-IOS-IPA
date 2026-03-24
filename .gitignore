@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Large Electron build artifacts
+dist/
+*-win/
+*-mac/
+*-linux/
+
+# Capacitor / iOS
+ios/App/build/
+ios/App/Pods/
+ios/App/App/public/
+www/
+capacitor.config.json.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log

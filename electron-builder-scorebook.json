@@ -1,0 +1,63 @@
+{
+    "appId": "com.master.marks",
+    "productName": "Master-Marks",
+    "copyright": "Copyright © 2025-2026 Professor TLILI Mohamed Lamine",
+    "directories": {
+        "output": "Scorebook-win"
+    },
+    "files": [
+        "index.html",
+        "script.js",
+        "style.css",
+        "activation-system.js",
+        "electron-main.js",
+        "preload.js",
+        "assets/**"
+    ],
+    "win": {
+        "target": [
+            {
+                "target": "nsis",
+                "arch": [
+                    "x64",
+                    "ia32"
+                ]
+            },
+            {
+                "target": "msi",
+                "arch": [
+                    "x64",
+                    "ia32"
+                ]
+            },
+            {
+                "target": "portable",
+                "arch": [
+                    "x64",
+                    "ia32"
+                ]
+            },
+            "dir"
+        ],
+        "icon": "assets/icon.ico"
+    },
+    "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "deleteAppDataOnUninstall": false,
+        "perMachine": true,
+        "createDesktopShortcut": true,
+        "createStartMenuShortcut": true,
+        "shortcutName": "دفتر التنقيط الالكتروني",
+        "installerIcon": "assets/icon.ico",
+        "uninstallerIcon": "assets/icon.ico",
+        "uninstallDisplayName": "دفتر التنقيط الالكتروني - حذف التثبيت"
+    },
+    "msi": {
+        "oneClick": false,
+        "perMachine": true,
+        "shortcutName": "Master-Marks",
+        "runAfterFinish": true,
+        "warningsAsErrors": false
+    }
+}

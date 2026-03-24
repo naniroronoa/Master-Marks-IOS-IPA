@@ -1,0 +1,60 @@
+name: Generate iOS IPA (Cloud Build)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Prepare Web Assets
+        run: |
+          mkdir -p www
+          cp -r assets www/ 2>/dev/null || true
+          cp index.html script.js style.css activation-system.js www/ 2>/dev/null || true
+
+      - name: Capacitor Sync
+        run: |
+          npx cap sync ios
+
+      - name: Resolve Swift Package Manager Dependencies
+        run: |
+          cd ios/App
+          xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+
+      - name: Build iOS App (XCode Archive)
+        run: |
+          cd ios/App
+          xcodebuild -project App.xcodeproj -scheme App -sdk iphoneos -configuration Release -archivePath $PWD/build/App.xcarchive archive CODE_SIGNING_ALLOWED=NO
+
+      - name: Manual IPA Packaging
+        run: |
+          mkdir -p Payload
+          # Find the .app bundle inside the archive and copy it to Payload
+          find ios/App/build/App.xcarchive/Products/Applications/ -name "*.app" -exec cp -r {} Payload/ \;
+          # Zip it into an .ipa
+          zip -r App.ipa Payload
+          # Clean up
+          rm -rf Payload
+
+      - name: Upload IPA Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-ipa
+          path: App.ipa
+          if-no-files-found: warn

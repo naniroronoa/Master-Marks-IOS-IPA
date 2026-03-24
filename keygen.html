@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - الأستاذ تليلي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #10b981;
+            --bg: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --tab-bg: #f5f3ff;
+            --input-bg: #ffffff;
+            --shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
+            --glass-blur: blur(10px);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --tab-bg: #1e293b;
+            --input-bg: #1e293b;
+            --shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            --primary: #818cf8;
+            --primary-hover: #6366f1;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: var(--text);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            /* Hide scrollbar but allow scrolling */
+            scrollbar-width: none;
+            /* Firefox */
+            -ms-overflow-style: none;
+            /* IE and Edge */
+        }
+
+        body::-webkit-scrollbar {
+            display: none;
+            /* Chrome, Safari and Opera */
+        }
+
+        html {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        html::-webkit-scrollbar {
+            display: none;
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 900px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-actions {
+            position: absolute;
+            top: 2.5rem;
+            left: 2.5rem;
+        }
+
+        .theme-toggle {
+            background: var(--tab-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: var(--border);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: none;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--tab-bg);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.75rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Generator Specific Enhancements */
+        .plan-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .plan-box {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            padding: 2rem 1.5rem;
+            border-radius: 24px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .plan-box i {
+            font-size: 2.5rem;
+            transition: all 0.4s;
+        }
+
+        /* Premium Plan Style */
+        #plan-premium.active {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+            color: #f59e0b;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.15);
+            transform: translateY(-5px);
+        }
+
+        #plan-premium.active i {
+            color: #f59e0b;
+            filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+            transform: scale(1.1);
+        }
+
+        /* Basic Plan Style */
+        #plan-basic.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%);
+            color: var(--primary);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+            transform: translateY(-5px);
+        }
+
+        #plan-basic.active i {
+            color: var(--primary);
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+            transform: scale(1.1);
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group label i {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .input-with-icon i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            transition: color 0.3s;
+        }
+
+        .input-with-icon input:focus+i {
+            color: var(--primary);
+        }
+
+        .input-with-icon input {
+            padding-left: 50px !important;
+            height: 56px;
+            font-size: 1.1rem;
+            border-radius: 16px;
+            background: var(--tab-bg);
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .input-with-icon input:focus {
+            border-color: var(--primary);
+            background: var(--card-bg);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn-generate {
+            width: 100%;
+            height: 60px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border-radius: 18px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+            margin-top: 1.5rem;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+
+        .btn-generate:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-generate:active {
+            transform: translateY(-1px);
+        }
+
+        .result-box {
+            margin-top: 2rem;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%);
+            border: 2px dashed var(--secondary);
+            border-radius: 24px;
+            padding: 2rem;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .key-display {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            word-break: break-all;
+            text-align: center;
+            margin: 1rem 0;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px;
+            width: 100%;
+            border-radius: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .result-box {
+            margin-top: 2.5rem;
+            padding: 2rem;
+            background: var(--tab-bg);
+            border-radius: 18px;
+            display: none;
+            border: 1px dashed var(--primary);
+        }
+
+        .key-display {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: var(--input-bg);
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            text-align: center;
+            letter-spacing: 1px;
+            word-break: break-all;
+            border: 1px solid var(--border);
+        }
+
+        .btn-copy {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+            margin: 0 auto;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .btn-copy:hover {
+            filter: brightness(1.05);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px -5px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Archive Styles */
+        .archive-table-container {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--input-bg);
+        }
+
+        th,
+        td {
+            text-align: right;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--tab-bg);
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        .status-expired {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .delete-btn {
+            color: #ef4444;
+            cursor: pointer;
+            background: rgba(239, 68, 68, 0.05);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Grouping Styles */
+        .device-row {
+            cursor: pointer;
+            background: var(--tab-bg) !important;
+            font-weight: 600;
+        }
+
+        .device-row:hover {
+            background: var(--border) !important;
+        }
+
+        .device-row i.toggle-icon {
+            transition: transform 0.3s;
+            margin-left: 8px;
+            color: var(--primary);
+        }
+
+        .device-row.expanded i.toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .details-row {
+            display: none;
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        [data-theme="dark"] .details-row {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .details-row.open {
+            display: table-row;
+        }
+
+        .details-container {
+            padding: 0 !important;
+        }
+
+        .sub-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .sub-table td {
+            padding: 12px 16px;
+            background: transparent !important;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sub-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .device-badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-right: 12px;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Stats & Search Styles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: var(--tab-bg);
+            color: var(--primary);
+        }
+
+        .stat-info .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            display: block;
+        }
+
+        .stat-info .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            padding-right: 45px !important;
+            background: var(--card-bg) !important;
+            border-radius: 16px !important;
+        }
+
+        .archive-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .archive-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        /* Toast Styles */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--secondary);
+            color: white;
+            padding: 16px 28px;
+            border-radius: 14px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            padding: 20px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .confirm-modal {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            padding: 2.5rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalPop {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-icon {
+            font-size: 3.5rem;
+            color: #ef4444;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .modal-desc {
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-cancel {
+            background: var(--tab-bg);
+            color: var(--text);
+            flex: 1;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .container {
+                padding: 1.75rem;
+            }
+
+            .header-actions {
+                top: 1.5rem;
+                left: 1.5rem;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+                border-bottom: none;
+            }
+
+            .tab-btn {
+                justify-content: flex-start;
+            }
+
+            .plan-options {
+                grid-template-columns: 1fr;
+            }
+
+            #basic-config .plan-options {
+                grid-template-columns: 1fr;
+            }
+
+            .key-display {
+                font-size: 1.1rem;
+            }
+
+            .btn-copy {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-actions">
+            <button class="theme-toggle" onclick="toggleTheme()" title="تبديل الوضع">
+                <i class="fas fa-moon" id="theme-icon"></i>
+            </button>
+        </div>
+
+        <h1>لوحة التحكم</h1>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('generator')">
+                <i class="fas fa-key"></i> توليد المفاتيح
+            </button>
+            <button class="tab-btn" onclick="switchTab('archive')">
+                <i class="fas fa-history"></i> أرشيف التفعيلات
+            </button>
+        </div>
+
+        <!-- Generator Section -->
+        <div id="generator-section" class="section active">
+            <div class="form-group">
+                <label><i class="fas fa-microchip"></i>معرف الجهاز (HWID) :</label>
+                <div class="input-with-icon">
+                    <input type="text" id="hwid-input" placeholder="Txxx - Lxxx - Ixxx - Lxxx - Ixxx">
+                    <i class="fas fa-fingerprint"></i>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-tag"></i>اسم الجهاز (اختياري) :</label>
+                <div class="input-with-icon">
+                    <input type="text" id="device-name-input" placeholder="مثلاً: حاسوب المنزل ...">
+                    <i class="fas fa-user-tag"></i>
+                </div>
+            </div>
+
+            <label><i class="fas fa-layer-group"></i>نوع الخطة :</label>
+            <div class="plan-options">
+                <div id="plan-premium" class="plan-box active" onclick="setPlan('PREMIUM')">
+                    <i class="fas fa-crown"></i>
+                    <span>Premium Edition</span>
+                </div>
+                <div id="plan-basic" class="plan-box" onclick="setPlan('BASIC')">
+                    <i class="fas fa-star"></i>
+                    <span>Basic Edition</span>
+                </div>
+            </div>
+
+            <div id="premium-config">
+                <div class="form-group">
+                    <label><i class="fas fa-calendar-alt"></i>مدة الاشتراك (بالأشهر) :</label>
+                    <div class="input-with-icon">
+                        <input type="number" id="months-input" value="1" min="1">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div id="basic-config" style="display:none;">
+                <label><i class="fas fa-hourglass-half"></i>مدة مخصصة :</label>
+                <div class="plan-options" style="grid-template-columns: repeat(3, 1fr); margin-top: 0.75rem;">
+                    <div class="form-group">
+                        <label style="font-size: 0.8rem;">أيام</label>
+                        <input type="number" id="days-input" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 0.8rem;">ساعات</label>
+                        <input type="number" id="hours-input" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 0.8rem;">دقائق</label>
+                        <input type="number" id="mins-input" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-generate" onclick="executeGeneration()">
+                <i class="fas fa-magic"></i> توليد مفتاح التفعيل
+            </button>
+
+            <div id="result" class="result-box">
+                <label
+                    style="color: var(--secondary); font-weight: 700; display: block; text-align: center; margin-bottom: 1rem;">
+                    <i class="fas fa-certificate" style="margin-left: 8px;"></i>تم توليد المفتاح بنجاح
+                </label>
+                <div id="key-output" class="key-display"></div>
+                <button class="btn btn-secondary" style="width: 100%; height: 50px; border-radius: 12px;"
+                    onclick="copyKey()">
+                    <i class="fas fa-copy" style="margin-left: 8px;"></i>نسخ مفتاح التفعيل
+                </button>
+            </div>
+        </div>
+
+        <!-- Archive Section -->
+        <div id="archive-section" class="section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-laptop-code"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-devices">0</span>
+                        <span class="stat-label">إجمالي الأجهزة</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: var(--secondary); background: rgba(16, 185, 129, 0.1);"><i
+                            class="fas fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-active">0</span>
+                        <span class="stat-label">تفعيلات نشطة</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);"><i
+                            class="fas fa-bolt"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-today">0</span>
+                        <span class="stat-label">أضيفت اليوم</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="archive-header">
+                <h2 class="archive-title">قائمة السجلات</h2>
+                <div style="font-size: 0.85rem; color: var(--text-muted);" id="results-count"></div>
+            </div>
+
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="archive-search" class="search-input" placeholder="بحث بمعرف الجهاز أو المفتاح..."
+                    oninput="handleSearch()">
+            </div>
+
+            <div class="archive-table-container">
+                <table id="main-archive-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">الجهاز (الاسم / HWID)</th>
+                            <th style="width: 25%;">الحالة العامة</th>
+                            <th style="width: 25%; text-align: left;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="archive-table-body">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Component -->
+    <div id="copy-toast" class="toast">
+        <i class="fas fa-check-circle"></i> تم نسخ المفتاح بنجاح!
+    </div>
+
+    <!-- Validation Modal -->
+    <div id="validation-modal" class="modal-overlay">
+        <div class="confirm-modal">
+            <div class="modal-icon" style="color: var(--primary);"><i class="fas fa-info-circle"></i></div>
+            <div class="modal-title">تنبيه</div>
+            <div class="modal-desc">يرجى إدخال معرف الجهاز (HWID) المراد تفعيله أولاً لإتمام العملية.</div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeValidationModal()">فهمت</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Component -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="confirm-modal">
+            <div class="modal-icon"><i class="fas fa-trash-alt"></i></div>
+            <div class="modal-title">تأكيد الحذف</div>
+            <div class="modal-desc">هل أنت متأكد من رغبتك في حذف هذا السجل؟ لا يمكن استرجاع البيانات بعد الحذف.
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeDeleteModal()">إلغاء</button>
+                <button class="btn btn-delete" onclick="confirmDelete()">نعم، احذف السجل</button>
+            </div>
+        </div>
+    </div>
+
+    </div>
+    </div>
+
+    <!-- Edit Name Modal -->
+    <div id="edit-name-modal" class="modal-overlay">
+        <div class="confirm-modal">
+            <div class="modal-icon" style="color: var(--primary);"><i class="fas fa-edit"></i></div>
+            <div class="modal-title">تعديل اسم الجهاز</div>
+            <p class="modal-desc">أدخل اسماً جديداً لهذا الجهاز لسهولة التعرف عليه لاحقاً.</p>
+            <div class="form-group" style="text-align: right;">
+                <label>اسم الجهاز :</label>
+                <div class="input-with-icon">
+                    <input type="text" id="new-device-name" placeholder="أدخل اسم الجهاز هنا...">
+                    <i class="fas fa-tag"></i>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeEditNameModal()">إلغاء</button>
+                <button class="btn" onclick="saveDeviceName()">حفظ التغييرات</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="keygen.js"></script>
+    <script>
+        let currentPlan = 'PREMIUM';
+        let archive = JSON.parse(localStorage.getItem('activation_archive') || '[]');
+        let deviceNames = JSON.parse(localStorage.getItem('device_names') || '{}');
+        let pendingArchiveData = null;
+        let editingHwid = null;
+
+        // Theme Handling
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('dashboard-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        // Initialize Theme
+        const savedTheme = localStorage.getItem('dashboard-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabId));
+            });
+            document.querySelectorAll('.section').forEach(sec => {
+                sec.classList.toggle('active', sec.id === `${tabId}-section`);
+            });
+            if (tabId === 'archive') renderArchive();
+        }
+
+        function setPlan(plan) {
+            currentPlan = plan;
+            document.getElementById('plan-premium').classList.toggle('active', plan === 'PREMIUM');
+            document.getElementById('plan-basic').classList.toggle('active', plan === 'BASIC');
+            document.getElementById('premium-config').style.display = plan === 'PREMIUM' ? 'block' : 'none';
+            document.getElementById('basic-config').style.display = plan === 'BASIC' ? 'block' : 'none';
+        }
+
+        function executeGeneration() {
+            const hwid = document.getElementById('hwid-input').value.trim();
+            const deviceName = document.getElementById('device-name-input').value.trim();
+            if (!hwid) {
+                openValidationModal();
+                return;
+            }
+
+            let expiryTime = Date.now();
+            let durationLabel = '';
+
+            if (currentPlan === 'PREMIUM') {
+                const months = parseInt(document.getElementById('months-input').value) || 1;
+                expiryTime += months * 30 * 24 * 60 * 60 * 1000;
+                durationLabel = `${months} شهر`;
+            } else {
+                const d = parseInt(document.getElementById('days-input').value) || 0;
+                const h = parseInt(document.getElementById('hours-input').value) || 0;
+                const m = parseInt(document.getElementById('mins-input').value) || 0;
+                expiryTime += (d * 24 * 60 * 60 * 1000) + (h * 60 * 60 * 1000) + (m * 60 * 1000);
+                durationLabel = `${d} يوم, ${h} سا, ${m} د`;
+            }
+
+            const key = generateGHKey(hwid, currentPlan, expiryTime);
+            document.getElementById('key-output').innerText = key;
+            document.getElementById('result').style.display = 'block';
+
+            pendingArchiveData = {
+                id: Date.now(),
+                hwid: hwid,
+                deviceName: deviceName,
+                key: key,
+                plan: currentPlan,
+                expiry: expiryTime,
+                timestamp: Date.now()
+            };
+        }
+
+        let expandedDevices = new Set();
+        let searchQuery = "";
+
+        function handleSearch() {
+            searchQuery = document.getElementById('archive-search').value.toLowerCase().trim();
+            renderArchive();
+        }
+
+        function calculateStats() {
+            const now = Date.now();
+            const uniqueHwids = new Set(archive.map(it => it.hwid));
+            const activeKeys = archive.filter(it => it.expiry > now);
+
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const addedToday = archive.filter(it => (it.timestamp || it.id) >= todayStart.getTime());
+
+            document.getElementById('stat-devices').innerText = uniqueHwids.size;
+            document.getElementById('stat-active').innerText = activeKeys.length;
+            document.getElementById('stat-today').innerText = addedToday.length;
+        }
+
+        function renderArchive() {
+            const tbody = document.getElementById('archive-table-body');
+            tbody.innerHTML = '';
+
+            calculateStats();
+
+            if (archive.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:3rem; color:var(--text-muted);"><i class="fas fa-folder-open" style="font-size: 3rem; display:block; margin-bottom:1rem; opacity:0.3;"></i>لا توجد تفعيلات في الأرشيف حالياً</td></tr>';
+                return;
+            }
+
+            // Grouping by HWID
+            const groups = {};
+            archive.forEach(item => {
+                if (!groups[item.hwid]) groups[item.hwid] = [];
+                groups[item.hwid].push(item);
+            });
+
+            // Filter by search query
+            let sortedHwids = Object.keys(groups).filter(hwid => {
+                const name = (deviceNames[hwid] || "").toLowerCase();
+                const searchMatch = hwid.toLowerCase().includes(searchQuery) ||
+                    name.includes(searchQuery) ||
+                    groups[hwid].some(it => it.key.toLowerCase().includes(searchQuery));
+                return searchMatch;
+            });
+
+            // Sort groups by the most recent activation
+            sortedHwids.sort((a, b) => {
+                const latestA = Math.max(...groups[a].map(it => it.timestamp || it.id));
+                const latestB = Math.max(...groups[b].map(it => it.timestamp || it.id));
+                return latestB - latestA;
+            });
+
+            document.getElementById('results-count').innerText = `${sortedHwids.length} جهاز متوفر`;
+
+            sortedHwids.forEach(hwid => {
+                const items = groups[hwid];
+                const isExpanded = expandedDevices.has(hwid);
+                // Sort items in group by date desc
+                items.sort((a, b) => (b.timestamp || b.id) - (a.timestamp || a.id));
+                const latestItem = items[0];
+
+                const mainTr = document.createElement('tr');
+                mainTr.className = `device-row ${isExpanded ? 'expanded' : ''}`;
+                mainTr.onclick = () => toggleDevice(hwid);
+
+                const now = Date.now();
+                const latestExpiry = Math.max(...items.map(it => it.expiry));
+                const timeLeft = latestExpiry - now;
+                const expiryDate = new Date(latestExpiry);
+                const expiryStr = expiryDate.toLocaleDateString('ar-DZ');
+                const expiryTimeStr = expiryDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                let statusDisplay = '';
+                if (timeLeft <= 0) {
+                    statusDisplay = `
+                        <div class="status-badge status-expired" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px;">
+                            <span>صلاحية منتهية</span>
+                            <small style="opacity: 0.8; font-size: 0.7rem;">انتهى في: ${expiryStr} | ${expiryTimeStr}</small>
+                        </div>`;
+                } else {
+                    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                    statusDisplay = `
+                        <div class="status-badge status-active" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px;">
+                            <span>مفعل (${days} يوم متبقي)</span>
+                            <small style="opacity: 0.9; font-size: 0.7rem;">ينتهي في: ${expiryStr} | ${expiryTimeStr}</small>
+                        </div>`;
+                }
+
+                const name = deviceNames[hwid] || '';
+                mainTr.innerHTML = `
+                    <td>
+                        <div style="display:flex; align-items:center;">
+                            <i class="fas fa-chevron-left toggle-icon" style="transform: ${isExpanded ? 'rotate(-90deg)' : 'none'}"></i>
+                            <div style="flex-grow: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    ${name ? `<span style="font-weight: 700; color: var(--primary); font-size: 1rem;">${name}</span>` : `<span style="font-family: monospace; font-weight: 700; color: var(--text);">${hwid}</span>`}
+                                    <button class="edit-name-btn" onclick="event.stopPropagation(); editDeviceName('${hwid}')" title="تعديل الاسم" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; padding: 4px; transition: color 0.2s;">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                </div>
+                                ${name ? `<div style="font-family: monospace; font-weight: 500; color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; opacity: 0.7;">${hwid}</div>` : ''}
+                                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">آخر تفعيل: ${new Date(latestItem.timestamp || latestItem.id).toLocaleDateString('ar-DZ')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${statusDisplay}</td>
+                    <td style="text-align: left;">
+                        <span class="device-badge">${items.length} مفتاح</span>
+                    </td>
+                `;
+                tbody.appendChild(mainTr);
+
+                // Details Row
+                const detailsTr = document.createElement('tr');
+                detailsTr.className = `details-row ${isExpanded ? 'open' : ''}`;
+
+                let subTableRows = '';
+                items.forEach(item => {
+                    const itemTimeLeft = item.expiry - now;
+                    let itemStatus = '';
+                    if (itemTimeLeft <= 0) {
+                        itemStatus = '<span class="status-badge status-expired" style="padding: 2px 6px; font-size: 0.7rem;">منتهي</span>';
+                    } else {
+                        const d = Math.floor(itemTimeLeft / (1000 * 60 * 60 * 24));
+                        itemStatus = `<span class="status-badge status-active" style="padding: 2px 6px; font-size: 0.7rem;">نشط (${d}ي)</span>`;
+                    }
+
+                    const dObj = new Date(item.timestamp || item.id);
+                    const dStr = dObj.toLocaleDateString('ar-DZ');
+
+                    subTableRows += `
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="font-family: monospace; font-size: 0.75rem; color: var(--primary); cursor: pointer; transition: opacity 0.2s;" 
+                                onclick="event.stopPropagation(); copyArchiveKey('${item.key}')" 
+                                title="اضغط للنسخ: ${item.key}">
+                                ${item.key.substring(0, 8)}...${item.key.slice(-8)}
+                            </td>
+                            <td style="font-size: 0.8rem;">${dStr}</td>
+                            <td style="font-size: 0.8rem;">${item.plan === 'PREMIUM' ? 'بريميوم' : 'أساسي'}</td>
+                            <td>${itemStatus}</td>
+                            <td style="text-align: left;">
+                                <button class="delete-btn" style="width: 28px; height: 28px; font-size: 0.75rem;" onclick="event.stopPropagation(); openDeleteModal(${item.id})"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                detailsTr.innerHTML = `
+                    <td colspan="3" class="details-container">
+                        <div style="padding: 1rem 1.5rem 1.5rem 1.5rem; background: var(--bg); border-radius: 0 0 16px 16px; margin: 0 10px 15px 10px; border: 1px solid var(--border); border-top: none;">
+                            <table class="sub-table">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border);">
+                                        <th style="font-size: 0.7rem; padding-bottom: 8px;">مفتاح التفعيل</th>
+                                        <th style="font-size: 0.7rem; padding-bottom: 8px;">تاريخ التفعيل</th>
+                                        <th style="font-size: 0.7rem; padding-bottom: 8px;">نوع الخطة</th>
+                                        <th style="font-size: 0.7rem; padding-bottom: 8px;">حالة المفتاح</th>
+                                        <th style="text-align: left; padding-bottom: 8px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>${subTableRows}</tbody>
+                            </table>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(detailsTr);
+            });
+        }
+
+        function toggleDevice(hwid) {
+            if (expandedDevices.has(hwid)) {
+                expandedDevices.delete(hwid);
+            } else {
+                expandedDevices.add(hwid);
+            }
+            renderArchive();
+        }
+
+        window.editDeviceName = function (hwid) {
+            editingHwid = hwid;
+            const currentName = deviceNames[hwid] || "";
+            document.getElementById('new-device-name').value = currentName;
+            document.getElementById('edit-name-modal').classList.add('open');
+            setTimeout(() => document.getElementById('new-device-name').focus(), 100);
+        };
+
+        window.closeEditNameModal = function () {
+            editingHwid = null;
+            document.getElementById('edit-name-modal').classList.remove('open');
+        };
+
+        window.saveDeviceName = function () {
+            if (!editingHwid) return;
+            const newName = document.getElementById('new-device-name').value.trim();
+            if (newName) {
+                deviceNames[editingHwid] = newName;
+            } else {
+                delete deviceNames[editingHwid];
+            }
+            localStorage.setItem('device_names', JSON.stringify(deviceNames));
+            renderArchive();
+            closeEditNameModal();
+            showToast("تم تحديث اسم الجهاز بنجاح");
+        };
+
+        let pendingDeleteId = null;
+
+        window.openDeleteModal = function (id) {
+            pendingDeleteId = id;
+            document.getElementById('delete-modal').classList.add('open');
+        };
+
+        window.closeDeleteModal = function () {
+            pendingDeleteId = null;
+            document.getElementById('delete-modal').classList.remove('open');
+        };
+
+        window.confirmDelete = function () {
+            if (pendingDeleteId) {
+                archive = archive.filter(it => it.id !== pendingDeleteId);
+                localStorage.setItem('activation_archive', JSON.stringify(archive));
+                renderArchive();
+                closeDeleteModal();
+                showToast('تم حذف السجل بنجاح');
+            }
+        };
+
+        window.openValidationModal = function () {
+            document.getElementById('validation-modal').classList.add('open');
+        };
+
+        window.closeValidationModal = function () {
+            document.getElementById('validation-modal').classList.remove('open');
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('copy-toast');
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        let audioCtx = null;
+        function playClickSound() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } catch (e) { }
+        }
+
+        document.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('button, .plan-box, .tab-btn')) playClickSound();
+        }, { passive: true });
+
+        window.copyArchiveKey = function (key) {
+            navigator.clipboard.writeText(key).then(() => {
+                showToast('تم نسخ المفتاح بنجاح!');
+            });
+        };
+
+        function copyKey() {
+            const keyOutput = document.getElementById('key-output').innerText;
+            if (!keyOutput) return;
+
+            navigator.clipboard.writeText(keyOutput).then(() => {
+                showToast('تم نسخ المفتاح بنجاح!');
+                if (pendingArchiveData) {
+                    if (pendingArchiveData.deviceName) {
+                        deviceNames[pendingArchiveData.hwid] = pendingArchiveData.deviceName;
+                        localStorage.setItem('device_names', JSON.stringify(deviceNames));
+                    }
+                    archive.unshift(pendingArchiveData);
+                    localStorage.setItem('activation_archive', JSON.stringify(archive));
+                    pendingArchiveData = null;
+                    document.getElementById('device-name-input').value = ""; // Clear name input
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
