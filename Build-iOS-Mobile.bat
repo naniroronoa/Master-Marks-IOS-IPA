@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 set GIT="C:\Program Files\Git\bin\git.exe"
 set GH="C:\Program Files\GitHub CLI\gh.exe"
 :: !IMPORTANT! Change this to your GitHub repository (e.g., username/repo-name)
-set REPO=YOUR_GITHUB_USERNAME/Master-Marks-IOS-IPA
+set REPO=naniroronoa/Master-Marks-IOS-IPA
 set BRANCH=master
 set OUTPUT_DIR=%~dp0IOS
 set APP_NAME=Master_Marks
