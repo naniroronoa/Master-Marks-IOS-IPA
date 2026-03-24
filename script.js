@@ -1467,37 +1467,26 @@ function renderStudentListTable() {
 
     const controlsContainer = document.querySelector('#student-lists-section .table-controls');
     controlsContainer.innerHTML = '';
-    controlsContainer.style.display = 'flex';
-    controlsContainer.style.justifyContent = 'space-between';
-    controlsContainer.style.alignItems = 'center';
-    controlsContainer.style.marginBottom = '1.5rem';
-
-    const leftGroup = document.createElement('div');
-    leftGroup.style.display = 'flex';
-    leftGroup.style.gap = '0.5rem';
-
-    const rightGroup = document.createElement('div');
-    rightGroup.style.display = 'flex';
-    rightGroup.style.gap = '0.5rem';
+    // Styling is handled by CSS .table-controls
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
     toggleBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل القائمة';
     toggleBtn.onclick = toggleEditMode;
-    rightGroup.appendChild(toggleBtn);
+    controlsContainer.appendChild(toggleBtn);
 
     if (isEditMode) {
         const addBtn = document.createElement('button');
         addBtn.className = 'btn btn-gradient-purple btn-action';
         addBtn.innerHTML = '<i class="fas fa-plus"></i> إضافة تلميذ';
         addBtn.onclick = addStudentToCurrentList;
-        rightGroup.appendChild(addBtn);
+        controlsContainer.appendChild(addBtn);
 
         const deleteAllBtn = document.createElement('button');
         deleteAllBtn.className = 'btn btn-danger btn-action';
         deleteAllBtn.innerHTML = '<i class="fas fa-trash"></i> حذف جميع البيانات';
         deleteAllBtn.onclick = deleteAllStudents;
-        rightGroup.appendChild(deleteAllBtn);
+        controlsContainer.appendChild(deleteAllBtn);
 
         const importBtnLabel = document.createElement('label');
         importBtnLabel.className = 'btn btn-dark-success btn-action';
@@ -1510,10 +1499,8 @@ function renderStudentListTable() {
         fileInput.style.display = 'none';
         fileInput.onchange = handleFileUpload;
         importBtnLabel.appendChild(fileInput);
-        rightGroup.appendChild(importBtnLabel);
+        controlsContainer.appendChild(importBtnLabel);
     }
-
-
 
     const exportWordBtn = document.createElement('button');
     exportWordBtn.className = 'btn btn-secondary btn-action';
@@ -1521,10 +1508,7 @@ function renderStudentListTable() {
     exportWordBtn.style.color = 'white';
     exportWordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
     exportWordBtn.onclick = exportStudentListToWord;
-    leftGroup.appendChild(exportWordBtn);
-
-    controlsContainer.appendChild(rightGroup);
-    controlsContainer.appendChild(leftGroup);
+    controlsContainer.appendChild(exportWordBtn);
 
     const tbody = document.getElementById('student-list-body');
     tbody.innerHTML = '';
@@ -1961,34 +1945,21 @@ function renderContinuousTable() {
 
     if (controlsContainer) {
         controlsContainer.innerHTML = '';
-        controlsContainer.style.display = 'flex';
-        controlsContainer.style.justifyContent = 'space-between';
-        controlsContainer.style.alignItems = 'center';
-        controlsContainer.style.marginBottom = '1.5rem';
-
-        const rightGroup = document.createElement('div');
-        rightGroup.style.display = 'flex';
-        rightGroup.style.gap = '0.5rem';
+        // Styling is handled by CSS .table-controls
 
         const editBtn = document.createElement('button');
         editBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
         editBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل البيانات';
         editBtn.onclick = toggleEditMode;
-        rightGroup.appendChild(editBtn);
+        controlsContainer.appendChild(editBtn);
 
         if (isEditMode) {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-danger btn-action';
             clearBtn.innerHTML = '<i class="fas fa-eraser"></i> حذف جميع البيانات';
             clearBtn.onclick = () => clearAllMarks('continuous');
-            rightGroup.appendChild(clearBtn);
+            controlsContainer.appendChild(clearBtn);
         }
-
-        const leftGroup = document.createElement('div');
-        leftGroup.style.display = 'flex';
-        leftGroup.style.gap = '0.5rem';
-
-
 
         const wordBtn = document.createElement('button');
         wordBtn.className = 'btn btn-secondary btn-action';
@@ -1996,10 +1967,8 @@ function renderContinuousTable() {
         wordBtn.style.color = 'white';
         wordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
         wordBtn.onclick = exportContinuousToWord;
-        leftGroup.appendChild(wordBtn);
-
-        controlsContainer.appendChild(rightGroup);
-        controlsContainer.appendChild(leftGroup);
+        wordBtn.style.marginRight = 'auto'; // Push to left side
+        controlsContainer.appendChild(wordBtn);
     }
 
     const table = document.querySelector('.continuous-table');
@@ -2255,35 +2224,21 @@ function renderMonitoringTable() {
 
     if (controlsContainer) {
         controlsContainer.innerHTML = '';
-        controlsContainer.style.display = 'flex';
-        controlsContainer.style.justifyContent = 'space-between';
-        controlsContainer.style.alignItems = 'center';
-        controlsContainer.style.marginBottom = '1.5rem';
-
-        const rightGroup = document.createElement('div');
-        rightGroup.style.display = 'flex';
-        rightGroup.style.gap = '0.5rem';
+        // Styling is handled by CSS .table-controls
 
         const editBtn = document.createElement('button');
         editBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
         editBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل البيانات';
         editBtn.onclick = toggleEditMode;
-        rightGroup.appendChild(editBtn);
+        controlsContainer.appendChild(editBtn);
 
         if (isEditMode) {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-danger btn-action';
             clearBtn.innerHTML = '<i class="fas fa-eraser"></i> حذف جميع البيانات';
             clearBtn.onclick = () => clearAllMarks('monitoring');
-            rightGroup.appendChild(clearBtn);
+            controlsContainer.appendChild(clearBtn);
         }
-
-        const leftGroup = document.createElement('div');
-        leftGroup.style.display = 'flex';
-        leftGroup.style.gap = '0.5rem';
-
-
-
 
         const wordBtn = document.createElement('button');
         wordBtn.className = 'btn btn-secondary btn-action';
@@ -2297,10 +2252,8 @@ function renderMonitoringTable() {
                 alert('عذراً، وظيفة التصدير قيد التحميل. يرجى المحاولة بعد ثانية.');
             }
         };
-        leftGroup.appendChild(wordBtn);
-
-        controlsContainer.appendChild(rightGroup);
-        controlsContainer.appendChild(leftGroup);
+        wordBtn.style.marginRight = 'auto'; // Push to left side
+        controlsContainer.appendChild(wordBtn);
     }
 
     const table = document.querySelector('.monitoring-table');
@@ -2586,37 +2539,28 @@ function renderGradingTable() {
     const controlsContainer = document.querySelector('#grading-section .table-controls');
     if (controlsContainer) {
         controlsContainer.innerHTML = '';
-        controlsContainer.style.display = 'flex';
-        controlsContainer.style.justifyContent = 'space-between';
-        controlsContainer.style.alignItems = 'center';
-
-        const rightGroup = document.createElement('div');
-        rightGroup.style.display = 'flex';
-        rightGroup.style.gap = '0.5rem';
+        // Styling is handled by CSS .table-controls
 
         const editBtn = document.createElement('button');
         editBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
         editBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل البيانات';
         editBtn.onclick = toggleEditMode;
-        rightGroup.appendChild(editBtn);
+        controlsContainer.appendChild(editBtn);
 
         if (isEditMode) {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-danger btn-action';
             clearBtn.innerHTML = '<i class="fas fa-eraser"></i> حذف جميع البيانات';
             clearBtn.onclick = () => clearAllMarks('grading');
-            rightGroup.appendChild(clearBtn);
+            controlsContainer.appendChild(clearBtn);
         }
-
-        const leftGroup = document.createElement('div');
-        leftGroup.style.display = 'flex';
-        leftGroup.style.gap = '0.5rem';
 
         const statsBtn = document.createElement('button');
         statsBtn.className = 'btn btn-vibrant-stats btn-action';
         statsBtn.innerHTML = '<i class="fas fa-chart-bar"></i> إحصائيات مفصلة';
         statsBtn.onclick = showStatisticsModal;
-        leftGroup.appendChild(statsBtn);
+        statsBtn.style.marginRight = 'auto'; // Push to left side
+        controlsContainer.appendChild(statsBtn);
 
         const wordBtn = document.createElement('button');
         wordBtn.className = 'btn btn-secondary btn-action';
@@ -2624,10 +2568,7 @@ function renderGradingTable() {
         wordBtn.style.color = 'white';
         wordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
         wordBtn.onclick = () => window.exportGradingToWord();
-        leftGroup.appendChild(wordBtn);
-
-        controlsContainer.appendChild(rightGroup);
-        controlsContainer.appendChild(leftGroup);
+        controlsContainer.appendChild(wordBtn);
     }
 
     const table = document.getElementById('gradingTable');
@@ -5462,6 +5403,34 @@ window.exportDigitizationExcel = async function () {
         }
 
         // --- Fallback: browser-style download ---
+        try {
+            if (window.showSaveFilePicker) {
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: finalFileName,
+                    types: [{
+                        description: 'Excel Spreadsheet',
+                        accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']}
+                    }]
+                });
+                
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                
+                if (window.showActivationToast) {
+                    window.showActivationToast('تم حفظ ملف Excel بنجاح ✓', 'success');
+                }
+                return;
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Excel save failed:', err);
+            }
+            return;
+        }
+
+        // Traditional fallback if showSaveFilePicker is not supported
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -5561,6 +5530,37 @@ window.executeWordDownload = async function () {
     }
 
     // --- Fallback: browser-style download ---
+    try {
+        if (window.showSaveFilePicker) {
+            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            const handle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                    description: 'Word Document',
+                    accept: {'application/msword': ['.doc']}
+                }]
+            });
+            
+            showDownloadNotification();
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            
+            if (window.showActivationToast) {
+                window.showActivationToast('تم حفظ الملف بنجاح ✓', 'success');
+            }
+            closeWordPreview();
+            return;
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('File save failed:', err);
+        }
+        closeWordPreview();
+        return;
+    }
+
+    // Traditional fallback if showSaveFilePicker is not supported (e.g. Safari/iOS)
     showDownloadNotification();
 
     setTimeout(() => {
@@ -5717,6 +5717,33 @@ window.exportAppData = async function () {
         }
 
         // --- Fallback: browser-style download ---
+        try {
+            if (window.showSaveFilePicker) {
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: 'JSON Data Backup',
+                        accept: {'application/json': ['.json']}
+                    }]
+                });
+                
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                
+                if (window.showActivationToast) {
+                    window.showActivationToast('تم تصدير ملف البيانات بنجاح', 'success');
+                }
+                return;
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Data backup save failed:', err);
+            }
+            return;
+        }
+
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');

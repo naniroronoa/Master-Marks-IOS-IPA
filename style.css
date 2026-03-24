@@ -1001,7 +1001,7 @@ body.dark-mode #home-section .card {
 }
 
 label {
-    margin-bottom: 0.6rem;
+    margin-bottom: 0;
     font-weight: 600;
     font-size: 0.95rem;
     color: var(--text-color);
@@ -1468,7 +1468,12 @@ tr:hover {
 
 .table-controls {
     padding: 0.5rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
 }
+
 
 .draggable-row {
     cursor: grab;
