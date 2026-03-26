@@ -3941,9 +3941,11 @@ window.exportMonitoringToPDF = function () {
         };
 
         // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Filesystem, Directory } = window.Capacitor.Plugins;
-            const { Share } = window.Capacitor.Plugins;
+        const cap = window.Capacitor || (window.parent && window.parent.Capacitor);
+        if (cap && cap.isNativePlatform()) {
+            const Plugins = cap.Plugins;
+            const Filesystem = Plugins.Filesystem;
+            const Share = Plugins.Share;
 
             if (Filesystem && Share) {
                 // Generate PDF as ArrayBuffer
@@ -3959,7 +3961,7 @@ window.exportMonitoringToPDF = function () {
                     const saveResult = await Filesystem.writeFile({
                         path: options.filename,
                         data: base64Data,
-                        directory: Directory.Cache
+                        directory: 'CACHE'
                     });
 
                     await Share.share({
@@ -5504,9 +5506,11 @@ window.exportDigitizationExcel = async function () {
         const buffer = await digitizationState.workbook.xlsx.writeBuffer();
 
         // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Filesystem, Directory } = window.Capacitor.Plugins;
-            const { Share } = window.Capacitor.Plugins;
+        const cap = window.Capacitor || (window.parent && window.parent.Capacitor);
+        if (cap && cap.isNativePlatform()) {
+            const Plugins = cap.Plugins;
+            const Filesystem = Plugins.Filesystem;
+            const Share = Plugins.Share;
 
             if (Filesystem && Share) {
                 // Convert Buffer to Base64
@@ -5520,7 +5524,7 @@ window.exportDigitizationExcel = async function () {
                 const saveResult = await Filesystem.writeFile({
                     path: finalFileName,
                     data: base64Data,
-                    directory: Directory.Cache
+                    directory: 'CACHE'
                 });
 
                 await Share.share({
@@ -5652,9 +5656,11 @@ window.executeWordDownload = async function () {
 
     try {
         // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Filesystem, Directory } = window.Capacitor.Plugins;
-            const { Share } = window.Capacitor.Plugins;
+        const cap = window.Capacitor || (window.parent && window.parent.Capacitor);
+        if (cap && cap.isNativePlatform()) {
+            const Plugins = cap.Plugins;
+            const Filesystem = Plugins.Filesystem;
+            const Share = Plugins.Share;
 
             if (Filesystem && Share) {
                 // Convert to real .docx using html-docx-js
@@ -5668,7 +5674,7 @@ window.executeWordDownload = async function () {
                 const saveResult = await Filesystem.writeFile({
                     path: finalFilename,
                     data: base64Data,
-                    directory: Directory.Cache
+                    directory: 'CACHE' // Use string for better compatibility
                 });
 
                 // Trigger Native Share Sheet (Allows "Save to Files")
@@ -5681,6 +5687,8 @@ window.executeWordDownload = async function () {
 
                 closeWordPreview();
                 return;
+            } else {
+                console.warn('Capacitor Plugins (Filesystem or Share) not found. Falling back.');
             }
         }
 
@@ -5888,9 +5896,11 @@ window.exportAppData = async function () {
         const filename = `MasterMarks_Data_${date}.json`;
 
         // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Filesystem, Directory } = window.Capacitor.Plugins;
-            const { Share } = window.Capacitor.Plugins;
+        const cap = window.Capacitor || (window.parent && window.parent.Capacitor);
+        if (cap && cap.isNativePlatform()) {
+            const Plugins = cap.Plugins;
+            const Filesystem = Plugins.Filesystem;
+            const Share = Plugins.Share;
 
             if (Filesystem && Share) {
                 // Buffer to Base64
@@ -5899,7 +5909,7 @@ window.exportAppData = async function () {
                 const saveResult = await Filesystem.writeFile({
                     path: filename,
                     data: base64Data,
-                    directory: Directory.Cache
+                    directory: 'CACHE'
                 });
 
                 await Share.share({
