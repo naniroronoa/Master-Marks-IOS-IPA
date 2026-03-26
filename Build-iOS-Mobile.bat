@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Force the script to run in its own directory
+cd /d "%~dp0"
+
 :: === Config ===
 set GIT="C:\Program Files\Git\bin\git.exe"
 set GH="C:\Program Files\GitHub CLI\gh.exe"
@@ -53,6 +56,14 @@ echo.
 
 :: === Step 4: Git Push to GitHub ===
 echo [4/6] Pushing to GitHub to trigger the build...
+
+:: Check if it's a git repo, if not, re-initialize it
+if not exist ".git" (
+    echo [INFO] Git repository not found. Re-initializing...
+    %GIT% init
+    %GIT% remote add origin https://github.com/%REPO%.git
+)
+
 %GIT% add .
 %GIT% commit -m "Build %APP_NAME% v!VERSION!" --allow-empty
 %GIT% push origin %BRANCH% --force
