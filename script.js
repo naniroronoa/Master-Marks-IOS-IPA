@@ -5628,17 +5628,37 @@ function sanitizeHtmlForWord(htmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
 
-    // 1. Remove Microsoft-specific namespaces that can corrupt mobile Word
-    const htmlElem = doc.documentElement;
-    htmlElem.removeAttribute('xmlns:o');
-    htmlElem.removeAttribute('xmlns:w');
-    htmlElem.removeAttribute('xmlns');
+    // 1. Get the core content (Section1 or Body)
+    const content = doc.querySelector('.Section1') || doc.body;
 
-    // 2. Ensure RTL is set globally
-    doc.body.setAttribute('dir', 'rtl');
-    doc.body.style.fontFamily = "'Tajawal', 'Arial', sans-serif";
+    // 2. Deep clean the HTML
+    let htmlContent = content.innerHTML;
+    
+    // Remove scripts, comments, and non-Word-friendly tags
+    htmlContent = htmlContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    htmlContent = htmlContent.replace(/<!--[\s\S]*?-->/g, '');
+    
+    // Ensure all tables have explicit borders and width for Word
+    htmlContent = htmlContent.replace(/<table/gi, '<table border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; width: 100%; border: 1px solid #000; direction: rtl;"');
+    htmlContent = htmlContent.replace(/<th/gi, '<th style="border: 1px solid #000; background-color: #f2f2f2; font-weight: bold;"');
+    htmlContent = htmlContent.replace(/<td/gi, '<td style="border: 1px solid #000;"');
 
-    return doc.documentElement.outerHTML;
+    // 3. Return a minimal, valid HTML structure that html-docx-js likes
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Arial', sans-serif; direction: rtl; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid black; padding: 5px; text-align: center; }
+        .title { font-size: 18pt; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body dir="rtl">
+    ${htmlContent}
+</body>
+</html>`;
 }
 
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
@@ -5650,6 +5670,11 @@ const blobToBase64 = (blob) => new Promise((resolve, reject) => {
 
 window.executeWordDownload = async function () {
     if (!currentWordExportData || !currentWordExportData.html) return;
+
+    if (typeof htmlDocx === 'undefined') {
+        alert('خطأ: مكتبة تحويل Word لم يتم تحميلها بعد. يرجى الانتظار قليلاً أو التحقق من الاتصال.');
+        return;
+    }
 
     let { html, filename } = currentWordExportData;
     const sanitizedHtml = sanitizeHtmlForWord(html);
@@ -5667,17 +5692,20 @@ window.executeWordDownload = async function () {
                 const docxBlob = htmlDocx.asBlob(sanitizedHtml);
                 const base64Data = await blobToBase64(docxBlob);
                 
-                // Ensure filename has .docx
-                const finalFilename = filename.replace(/\.doc$/, '.docx');
+                // Force .docx extension for modern Word compatibility
+                let finalFilename = filename;
+                if (!finalFilename.toLowerCase().endsWith('.docx')) {
+                    finalFilename = finalFilename.replace(/\.doc$/, '') + '.docx';
+                }
 
                 // Write to temporary cache directory
                 const saveResult = await Filesystem.writeFile({
                     path: finalFilename,
                     data: base64Data,
-                    directory: 'CACHE' // Use string for better compatibility
+                    directory: 'CACHE'
                 });
 
-                // Trigger Native Share Sheet (Allows "Save to Files")
+                // Trigger Native Share Sheet
                 await Share.share({
                     title: 'تصدير ملف Word',
                     text: 'حفظ مستند الوورد الخاص بك',
@@ -5687,8 +5715,6 @@ window.executeWordDownload = async function () {
 
                 closeWordPreview();
                 return;
-            } else {
-                console.warn('Capacitor Plugins (Filesystem or Share) not found. Falling back.');
             }
         }
 
@@ -5704,14 +5730,14 @@ window.executeWordDownload = async function () {
                 filters: [{ name: 'Word Documents', extensions: ['doc'] }]
             });
 
-            if (saved) {
-                if (window.showActivationToast) window.showActivationToast('تم حفظ ملف Word بنجاح ✓', 'success');
+            if (saved && window.showActivationToast) {
+                window.showActivationToast('تم حفظ ملف Word بنجاح ✓', 'success');
                 closeWordPreview();
             }
             return;
         }
 
-        // --- 3. Standard Browser Fallback (Desktop/Web) ---
+        // --- 3. Standard Browser Fallback ---
         showDownloadNotification();
         setTimeout(() => {
             const blob = new Blob(['\ufeff', sanitizedHtml], { type: 'application/msword' });
