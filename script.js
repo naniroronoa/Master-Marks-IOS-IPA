@@ -1492,43 +1492,39 @@ function renderStudentListTable() {
     if (!currentClass) return;
 
     const controlsContainer = document.querySelector('#student-lists-section .table-controls');
+    if (!controlsContainer) return;
+
     controlsContainer.innerHTML = '';
     controlsContainer.style.display = 'flex';
-    controlsContainer.style.justifyContent = 'space-between';
+    controlsContainer.style.flexWrap = 'wrap';
+    controlsContainer.style.gap = '0.5rem';
     controlsContainer.style.alignItems = 'center';
     controlsContainer.style.marginBottom = '1.5rem';
-
-    const leftGroup = document.createElement('div');
-    leftGroup.style.display = 'flex';
-    leftGroup.style.gap = '0.5rem';
-
-    const rightGroup = document.createElement('div');
-    rightGroup.style.display = 'flex';
-    rightGroup.style.gap = '0.5rem';
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
     toggleBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل القائمة';
     toggleBtn.onclick = toggleEditMode;
-    rightGroup.appendChild(toggleBtn);
+    controlsContainer.appendChild(toggleBtn);
 
     if (isEditMode) {
         const addBtn = document.createElement('button');
         addBtn.className = 'btn btn-gradient-purple btn-action';
         addBtn.innerHTML = '<i class="fas fa-plus"></i> إضافة تلميذ';
         addBtn.onclick = addStudentToCurrentList;
-        rightGroup.appendChild(addBtn);
+        controlsContainer.appendChild(addBtn);
 
         const deleteAllBtn = document.createElement('button');
         deleteAllBtn.className = 'btn btn-danger btn-action';
         deleteAllBtn.innerHTML = '<i class="fas fa-trash"></i> حذف جميع البيانات';
         deleteAllBtn.onclick = deleteAllStudents;
-        rightGroup.appendChild(deleteAllBtn);
+        controlsContainer.appendChild(deleteAllBtn);
 
         const importBtnLabel = document.createElement('label');
         importBtnLabel.className = 'btn btn-dark-success btn-action';
         importBtnLabel.innerHTML = '<i class="fas fa-file-import"></i> استيراد Excel';
         importBtnLabel.style.cursor = 'pointer';
+        importBtnLabel.style.margin = '0'; // Ensure it behaves like a button in flex
 
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -1536,10 +1532,8 @@ function renderStudentListTable() {
         fileInput.style.display = 'none';
         fileInput.onchange = handleFileUpload;
         importBtnLabel.appendChild(fileInput);
-        rightGroup.appendChild(importBtnLabel);
+        controlsContainer.appendChild(importBtnLabel);
     }
-
-
 
     const exportWordBtn = document.createElement('button');
     exportWordBtn.className = 'btn btn-secondary btn-action';
@@ -1547,10 +1541,7 @@ function renderStudentListTable() {
     exportWordBtn.style.color = 'white';
     exportWordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
     exportWordBtn.onclick = exportStudentListToWord;
-    leftGroup.appendChild(exportWordBtn);
-
-    controlsContainer.appendChild(rightGroup);
-    controlsContainer.appendChild(leftGroup);
+    controlsContainer.appendChild(exportWordBtn);
 
     const tbody = document.getElementById('student-list-body');
     tbody.innerHTML = '';
@@ -3949,7 +3940,46 @@ window.exportMonitoringToPDF = function () {
             pagebreak: { mode: ['css', 'legacy'] }
         };
 
-        // --- Try Electron save dialog first ---
+        // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { Filesystem, Directory } = window.Capacitor.Plugins;
+            const { Share } = window.Capacitor.Plugins;
+
+            if (Filesystem && Share) {
+                // Generate PDF as ArrayBuffer
+                html2pdf().set(options).from(html).output('arraybuffer').then(async (buffer) => {
+                    // Convert Buffer to Base64
+                    const uint8 = new Uint8Array(buffer);
+                    let binary = '';
+                    for (let i = 0; i < uint8.byteLength; i++) {
+                        binary += String.fromCharCode(uint8[i]);
+                    }
+                    const base64Data = btoa(binary);
+
+                    const saveResult = await Filesystem.writeFile({
+                        path: options.filename,
+                        data: base64Data,
+                        directory: Directory.Cache
+                    });
+
+                    await Share.share({
+                        title: 'تصدير ملف PDF',
+                        text: 'حفظ ملف مراقبة الأعمال الخاص بك',
+                        url: saveResult.uri,
+                        dialogTitle: 'اختر مكان حفظ الملف'
+                    });
+
+                    feedback.remove();
+                }).catch(e => {
+                    feedback.remove();
+                    console.error('PDF Capacitor Error:', e);
+                    alert("خطأ أثناء الحفظ (Capacitor): " + e.message);
+                });
+                return;
+            }
+        }
+
+        // --- 2. Electron Save Dialog ---
         if (window.electronAPI && window.electronAPI.saveFile) {
             html2pdf().set(options).from(html).output('arraybuffer').then(async (buffer) => {
                 const saved = await window.electronAPI.saveFile({
@@ -3957,10 +3987,8 @@ window.exportMonitoringToPDF = function () {
                     buffer: Array.from(new Uint8Array(buffer)),
                     filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
                 });
-                if (saved) {
-                    if (window.showActivationToast) {
-                        window.showActivationToast('تم حفظ ملف PDF بنجاح ✓', 'success');
-                    }
+                if (saved && window.showActivationToast) {
+                    window.showActivationToast('تم حفظ ملف PDF بنجاح ✓', 'success');
                 }
                 feedback.remove();
             }).catch(e => {
@@ -3970,9 +3998,12 @@ window.exportMonitoringToPDF = function () {
             return;
         }
 
-        // --- Fallback: browser-style download ---
+        // --- 3. Standard Browser Fallback ---
         html2pdf().set(options).from(html).save().then(() => {
             feedback.remove();
+            if (window.showActivationToast) {
+                window.showActivationToast('تم تحميل الملف بنجاح', 'success');
+            }
         }).catch(e => {
             feedback.remove();
             alert("خطأ أثناء الحفظ: " + e.message);
@@ -5472,7 +5503,37 @@ window.exportDigitizationExcel = async function () {
     try {
         const buffer = await digitizationState.workbook.xlsx.writeBuffer();
 
-        // --- Try Electron save dialog first ---
+        // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { Filesystem, Directory } = window.Capacitor.Plugins;
+            const { Share } = window.Capacitor.Plugins;
+
+            if (Filesystem && Share) {
+                // Convert Buffer to Base64
+                const uint8 = new Uint8Array(buffer);
+                let binary = '';
+                for (let i = 0; i < uint8.byteLength; i++) {
+                    binary += String.fromCharCode(uint8[i]);
+                }
+                const base64Data = btoa(binary);
+
+                const saveResult = await Filesystem.writeFile({
+                    path: finalFileName,
+                    data: base64Data,
+                    directory: Directory.Cache
+                });
+
+                await Share.share({
+                    title: 'تصدير ملف Excel',
+                    text: 'حفظ ملف الرقمنة الخاص بك',
+                    url: saveResult.uri,
+                    dialogTitle: 'اختر مكان حفظ الملف'
+                });
+                return;
+            }
+        }
+
+        // --- 2. Electron Save Dialog ---
         if (window.electronAPI && window.electronAPI.saveFile) {
             const saved = await window.electronAPI.saveFile({
                 defaultPath: finalFileName,
@@ -5487,7 +5548,7 @@ window.exportDigitizationExcel = async function () {
             return;
         }
 
-        // --- Fallback: browser-style download ---
+        // --- 3. Standard Browser Fallback ---
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -5498,13 +5559,13 @@ window.exportDigitizationExcel = async function () {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        // Show success toast
         if (window.showActivationToast) {
             window.showActivationToast('تم تصدير ملف Excel بنجاح ✓', 'success');
         }
 
     } catch (err) {
-        alert('حدث خطأ أثناء التصدير (ExcelJS): ' + err.message);
+        console.error("Excel Export failed:", err);
+        alert('حدث خطأ أثناء تصدير ملف Excel');
     }
 };
 
@@ -5558,50 +5619,109 @@ window.closeWordPreview = function () {
     document.body.classList.remove('modal-open');
 };
 
+// --- Refined Word Export with Sanitization & Capacitor Support ---
+function sanitizeHtmlForWord(htmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+
+    // 1. Remove Microsoft-specific namespaces that can corrupt mobile Word
+    const htmlElem = doc.documentElement;
+    htmlElem.removeAttribute('xmlns:o');
+    htmlElem.removeAttribute('xmlns:w');
+    htmlElem.removeAttribute('xmlns');
+
+    // 2. Ensure RTL is set globally
+    doc.body.setAttribute('dir', 'rtl');
+    doc.body.style.fontFamily = "'Tajawal', 'Arial', sans-serif";
+
+    return doc.documentElement.outerHTML;
+}
+
+const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+});
+
 window.executeWordDownload = async function () {
-    if (!currentWordExportData.html) return;
+    if (!currentWordExportData || !currentWordExportData.html) return;
 
-    const { html, filename } = currentWordExportData;
+    let { html, filename } = currentWordExportData;
+    const sanitizedHtml = sanitizeHtmlForWord(html);
 
-    // --- Try Electron save dialog first ---
-    if (window.electronAPI && window.electronAPI.saveFile) {
-        // Convert HTML string to something Electron can handle as a buffer
-        // Note: We include the BOM \ufeff for Word encoding
-        const contentWithBOM = '\ufeff' + html;
-        const encoder = new TextEncoder();
-        const uint8Array = encoder.encode(contentWithBOM);
+    try {
+        // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { Filesystem, Directory } = window.Capacitor.Plugins;
+            const { Share } = window.Capacitor.Plugins;
 
-        const saved = await window.electronAPI.saveFile({
-            defaultPath: filename,
-            buffer: Array.from(uint8Array),
-            filters: [{ name: 'Word Documents', extensions: ['doc'] }]
-        });
+            if (Filesystem && Share) {
+                // Convert to real .docx using html-docx-js
+                const docxBlob = htmlDocx.asBlob(sanitizedHtml);
+                const base64Data = await blobToBase64(docxBlob);
+                
+                // Ensure filename has .docx
+                const finalFilename = filename.replace(/\.doc$/, '.docx');
 
-        if (saved) {
-            if (window.showActivationToast) {
-                window.showActivationToast('تم حفظ ملف Word بنجاح ✓', 'success');
+                // Write to temporary cache directory
+                const saveResult = await Filesystem.writeFile({
+                    path: finalFilename,
+                    data: base64Data,
+                    directory: Directory.Cache
+                });
+
+                // Trigger Native Share Sheet (Allows "Save to Files")
+                await Share.share({
+                    title: 'تصدير ملف Word',
+                    text: 'حفظ مستند الوورد الخاص بك',
+                    url: saveResult.uri,
+                    dialogTitle: 'اختر مكان حفظ الملف'
+                });
+
+                closeWordPreview();
+                return;
             }
-            closeWordPreview();
         }
-        return;
+
+        // --- 2. Electron Save Dialog ---
+        if (window.electronAPI && window.electronAPI.saveFile) {
+            const contentWithBOM = '\ufeff' + sanitizedHtml;
+            const encoder = new TextEncoder();
+            const uint8Array = encoder.encode(contentWithBOM);
+
+            const saved = await window.electronAPI.saveFile({
+                defaultPath: filename,
+                buffer: Array.from(uint8Array),
+                filters: [{ name: 'Word Documents', extensions: ['doc'] }]
+            });
+
+            if (saved) {
+                if (window.showActivationToast) window.showActivationToast('تم حفظ ملف Word بنجاح ✓', 'success');
+                closeWordPreview();
+            }
+            return;
+        }
+
+        // --- 3. Standard Browser Fallback (Desktop/Web) ---
+        showDownloadNotification();
+        setTimeout(() => {
+            const blob = new Blob(['\ufeff', sanitizedHtml], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closeWordPreview();
+        }, 800);
+
+    } catch (err) {
+        console.error('Export Error:', err);
+        alert('حدث خطأ أثناء محاولة حفظ الملف: ' + err.message);
     }
-
-    // --- Fallback: browser-style download ---
-    showDownloadNotification();
-
-    setTimeout(() => {
-        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        closeWordPreview();
-    }, 800);
 };
 
 function showDownloadNotification() {
@@ -5714,6 +5834,50 @@ window.toggleSidebar = function () {
     if (typeof playClickSound === 'function') playClickSound();
 };
 
+function initSidebarGestures() {
+    const floatingBtn = document.getElementById('floating-sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    // 1. Swipe left on "Show Menu" button to open
+    let floatStartX = 0;
+    if (floatingBtn) {
+        floatingBtn.addEventListener('touchstart', e => {
+            floatStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        floatingBtn.addEventListener('touchend', e => {
+            let floatEndX = e.changedTouches[0].screenX;
+            // Swipe Left (X decreases) -> open sidebar
+            if (floatStartX - floatEndX > 40) { 
+                if (document.body.classList.contains('sidebar-collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        }, { passive: true });
+    }
+    
+    // 2. Swipe right inside the sidebar to close
+    let sidebarStartX = 0;
+    if (sidebar) {
+        sidebar.addEventListener('touchstart', e => {
+            sidebarStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        sidebar.addEventListener('touchend', e => {
+            let sidebarEndX = e.changedTouches[0].screenX;
+            // Swipe Right (X increases) -> close sidebar
+            if (sidebarEndX - sidebarStartX > 40) {
+                if (!document.body.classList.contains('sidebar-collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        }, { passive: true });
+    }
+}
+
+// Run the setup when DOM is ready
+document.addEventListener('DOMContentLoaded', initSidebarGestures);
+
 // --- Data Backup & Restore ---
 let tempImportedData = null;
 
@@ -5723,7 +5887,32 @@ window.exportAppData = async function () {
         const date = new Date().toISOString().split('T')[0];
         const filename = `MasterMarks_Data_${date}.json`;
 
-        // --- Try Electron save dialog first ---
+        // --- 1. Capacitor (iOS/iPad/Android) Native Export ---
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { Filesystem, Directory } = window.Capacitor.Plugins;
+            const { Share } = window.Capacitor.Plugins;
+
+            if (Filesystem && Share) {
+                // Buffer to Base64
+                const base64Data = btoa(unescape(encodeURIComponent(dataStr)));
+
+                const saveResult = await Filesystem.writeFile({
+                    path: filename,
+                    data: base64Data,
+                    directory: Directory.Cache
+                });
+
+                await Share.share({
+                    title: 'تصدير نسخة احتياطية',
+                    text: 'حفظ ملف البيانات الخاص بك',
+                    url: saveResult.uri,
+                    dialogTitle: 'اختر مكان حفظ الملف'
+                });
+                return;
+            }
+        }
+
+        // --- 2. Electron Save Dialog ---
         if (window.electronAPI && window.electronAPI.saveFile) {
             const encoder = new TextEncoder();
             const uint8Array = encoder.encode(dataStr);
@@ -5734,15 +5923,13 @@ window.exportAppData = async function () {
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
 
-            if (saved) {
-                if (window.showActivationToast) {
-                    window.showActivationToast('تم تصدير ملف البيانات بنجاح', 'success');
-                }
+            if (saved && window.showActivationToast) {
+                window.showActivationToast('تم تصدير ملف البيانات بنجاح', 'success');
             }
             return;
         }
 
-        // --- Fallback: browser-style download ---
+        // --- 3. Standard Browser Fallback ---
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
