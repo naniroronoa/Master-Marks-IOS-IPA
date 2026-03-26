@@ -13,7 +13,6 @@
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Local FontAwesome for offline compatibility -->
     <link rel="stylesheet" href="assets/lib/fontawesome/css/all.min.css">
@@ -145,6 +144,27 @@
                         </div>
                     </div>
                 </div>
+
+                <button class="nav-btn locked-item" onclick="switchSection(event, 'absences')">
+                    <i class="fas fa-calendar-minus"></i> الغيابات
+                </button>
+                <!-- Absences Submenu -->
+                <div id="absences-submenu" class="sidebar-submenu hidden">
+                    <div class="submenu-group">
+                        <label><i class="fas fa-users"></i> الفوج التربوي:</label>
+                        <ul id="sidebar-absences-class-list" class="submenu-list">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+                    <div class="submenu-group">
+                        <label><i class="fas fa-calendar-alt"></i> الفصل:</label>
+                        <div class="trimester-select-grid">
+                            <button class="sub-btn active-trim" onclick="switchTrimester(1)">1</button>
+                            <button class="sub-btn" onclick="switchTrimester(2)">2</button>
+                            <button class="sub-btn" onclick="switchTrimester(3)">3</button>
+                        </div>
+                    </div>
+                </div>
                 <button class="nav-btn locked-item" onclick="switchSection(event, 'monitoring')">
                     <i class="fas fa-clipboard-check"></i> مراقبة الأعمال
                 </button>
@@ -214,8 +234,8 @@
             </nav>
             <div class="footer-info">
                 <div class="social-links">
-                    <a href="mailto:professor.tlili@gmail.com" target="_blank" title="إرسال إيميل"><i
-                            class="fas fa-envelope"></i></a>
+                    <a href="https://mail.google.com/mail/?view=cm&fs=1&to=professor.tlili@gmail.com" target="_blank"
+                        title="إرسال إيميل"><i class="fas fa-envelope"></i></a>
                     <a href="https://www.facebook.com/TLILIProfessor/" target="_blank" title="Facebook"><i
                             class="fab fa-facebook"></i></a>
                     <a href="https://www.instagram.com/pr_tlili/" target="_blank" title="Instagram"><i
@@ -292,7 +312,8 @@
                         </div>
                         <div class="logo-instructions">
                             <h3 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">شعار الأستاذ</h3>
-                            <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.5;">اضغط على المربع المخصص لرفع صورة (PNG,
+                            <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.5;">اضغط
+                                على المربع المخصص لرفع صورة (PNG,
                                 JPG).<br>سيظهر هذا الشعار بشكل أنيق في أعلى التقارير والواجهة الرئيسية.</p>
                             <button class="btn btn-sm btn-danger hidden" id="remove-logo-btn"
                                 onclick="removeTeacherLogo()" style="margin-top: 1rem;">
@@ -418,6 +439,139 @@
                 <div id="student-list-reminder" class="grading-error-bar">
                     <i class="fas fa-info-circle"></i>
                     <span></span>
+                </div>
+            </section>
+
+            <!-- SECTION: ABSENCES -->
+            <section id="absences-section" class="section hidden">
+                <div class="header-card continuous-header">
+                    <div class="theme-decorations header-decorations"></div>
+                    <div class="header-top-row">
+                        <h1 class="section-title-small"><i class="fas fa-calendar-minus"></i> إحصاء الغيابات</h1>
+                    </div>
+                    <div id="teacher-info-header-absences" class="teacher-info-header">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Absences Controls -->
+                <div class="card" style="margin-bottom: 1rem; padding: 1rem;">
+                    <div class="table-controls" style="margin-bottom: 0;">
+                        <button class="btn btn-primary" onclick="openAbsencesStatsModal()">
+                            <i class="fas fa-chart-bar"></i> إحصائيات الفصل
+                        </button>
+                    </div>
+                </div>
+
+                <div class="absences-container" style="display: flex; justify-content: center;">
+                    <!-- Calendar Card -->
+                    <div class="card calendar-card" style="width: 100%; max-width: 600px;">
+                        <div class="calendar-header">
+                            <button class="calendar-nav-btn" onclick="changeAbsenceMonth(-1)"><i
+                                    class="fas fa-chevron-right"></i></button>
+                            <h2 id="calendar-month-year">مارس 2026</h2>
+                            <button class="calendar-nav-btn" onclick="changeAbsenceMonth(1)"><i
+                                    class="fas fa-chevron-left"></i></button>
+                        </div>
+                        <div class="calendar-grid-header">
+                            <span>الأحد</span><span>الأثنين</span><span>الثلاثاء</span><span>الأربعاء</span><span>الخميس</span><span>الجمعة</span><span>السبت</span>
+                        </div>
+                        <div id="calendar-days-grid" class="calendar-days-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Absences List Modal -->
+                <div id="absences-list-modal" class="modal-overlay"
+                    onclick="if(event.target === this) closeAbsencesListModal()">
+                    <div class="modal-content"
+                        style="max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;">
+                        <span class="close-modal" onclick="closeAbsencesListModal()"><i class="fas fa-times"></i></span>
+                        <div class="absences-list-header">
+                            <h3>قائمة التلاميذ: <span id="selected-absence-date">10 سبتمبر 2025</span></h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="students-list-table">
+                                <thead>
+                                    <tr>
+                                        <th>الرقم</th>
+                                        <th>اللقب و الاسم</th>
+                                        <th style="width: 100px;">الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="absences-student-list-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="text-align: left; margin-top: 15px;">
+                            <button class="btn btn-primary" onclick="closeAbsencesListModal()"><i
+                                    class="fas fa-check"></i> حفظ و إغلاق</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Modal -->
+                <div id="absences-stats-modal" class="modal-overlay"
+                    onclick="if(event.target === this) closeAbsencesStatsModal()">
+                    <div class="modal-content"
+                        style="max-width: 1300px; width: 98%; max-height: 90vh; overflow-y: auto;">
+                        <span class="close-modal" onclick="closeAbsencesStatsModal()"><i
+                                class="fas fa-times"></i></span>
+
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                            <h3 style="margin: 0;">إحصائيات الغيابات للفصل <span id="absences-stats-trimester">1</span>
+                            </h3>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="btn-toggle-chart" class="btn btn-primary" onclick="toggleAbsencesChart()"
+                                    style="transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <i class="fas fa-chart-pie"></i> تحليل النتائج
+                                </button>
+                                <button class="btn btn-secondary"
+                                    style="background-color: #2b579a; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                                    onclick="exportAbsencesToWord()">
+                                    <i class="fas fa-file-word"></i> تصدير Word
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table View -->
+                        <div id="absences-stats-table-view" class="table-responsive">
+                            <table class="students-list-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 1%; white-space: nowrap;">الرقم</th>
+                                        <th id="th-absences-name"
+                                            style="width: 1%; white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.2s;"
+                                            onclick="sortAbsenceStats('name')"
+                                            onmouseover="this.style.color='var(--primary-color)'"
+                                            onmouseout="this.style.color=''">اللقب و الاسم <i class="fas fa-sort"
+                                                style="opacity:0.3"></i></th>
+                                        <th id="th-absences-count"
+                                            style="width: 1%; white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.2s;"
+                                            onclick="sortAbsenceStats('count')"
+                                            onmouseover="this.style.color='var(--primary-color)'"
+                                            onmouseout="this.style.color=''">عدد مرات الغياب <i class="fas fa-sort"
+                                                style="opacity:0.3"></i></th>
+                                        <th>تواريخ الغياب</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="absences-stats-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Chart View -->
+                        <div id="absences-stats-chart-view" class="hidden" style="padding: 10px;">
+                            <div id="absences-chart-container"
+                                style="display: flex; flex-direction: column; gap: 20px;">
+                                <!-- Bar charts built via JS -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -608,7 +762,8 @@
                     <div class="header-top-row">
                         <h1 class="section-title-small"><i class="fas fa-database"></i> بيانات الرقمنة</h1>
                     </div>
-                    <div class="teacher-info-header" style="font-size:0.95rem; gap: 2rem; width: fit-content; margin: 0 auto;">
+                    <div class="teacher-info-header"
+                        style="font-size:0.95rem; gap: 2rem; width: fit-content; margin: 0 auto;">
                         <div class="info-item">
                             <span class="info-label">معالجة البيانات</span>
                             <span class="info-value">تلقائية وذكية</span>
@@ -625,7 +780,8 @@
                 </div>
 
                 <!-- Simplified Upload & Instructions Area -->
-                <div class="backup-cards-grid" id="digitization-upload-area" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;">
+                <div class="backup-cards-grid" id="digitization-upload-area"
+                    style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;">
                     <!-- Combined Upload & Info Card -->
                     <div class="backup-action-card backup-import-card">
                         <div class="backup-card-icon backup-icon-import">
@@ -633,26 +789,34 @@
                         </div>
                         <div class="backup-card-body">
                             <h3>ارفع ملف Excel للرقمنة</h3>
-                            <p>قم باختيار ملف الرقمنة (Excel) المستخرج من موقع الرقمنة. سيقوم التطبيق تلقائياً بالتعرف على الأفواج والطلبة.</p>
-                            
+                            <p>قم باختيار ملف الرقمنة (Excel) المستخرج من موقع الرقمنة. سيقوم التطبيق تلقائياً بالتعرف
+                                على الأفواج والطلبة.</p>
+
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
                                 <ul class="backup-feature-list">
-                                    <li style="color: var(--primary-color); font-weight: 700; margin-bottom: 5px;">المواصفات التقنية:</li>
+                                    <li style="color: var(--primary-color); font-weight: 700; margin-bottom: 5px;">
+                                        المواصفات التقنية:</li>
                                     <li><i class="fas fa-check-circle"></i> دعم ملفات .xlsx و .xls</li>
                                     <li><i class="fas fa-check-circle"></i> استخراج تلقائي للأفواج</li>
                                     <li><i class="fas fa-check-circle"></i> معالجة سريعة وآمنة</li>
                                 </ul>
                                 <ul class="backup-feature-list">
-                                    <li style="color: #f59e0b; font-weight: 700; margin-bottom: 5px;">خطوات المزامنة:</li>
-                                    <li><i class="fas fa-info-circle" style="color: #f59e0b;"></i> اختر فوج الرقمنة ثم الفوج المقابل</li>
-                                    <li><i class="fas fa-info-circle" style="color: #f59e0b;"></i> تأكد من اختيار الفصل الدراسي</li>
-                                    <li><i class="fas fa-info-circle" style="color: #f59e0b;"></i> راجع البيانات قبل التصدير</li>
+                                    <li style="color: #f59e0b; font-weight: 700; margin-bottom: 5px;">خطوات المزامنة:
+                                    </li>
+                                    <li><i class="fas fa-info-circle" style="color: #f59e0b;"></i> اختر فوج الرقمنة ثم
+                                        الفوج المقابل</li>
+                                    <li><i class="fas fa-info-circle" style="color: #f59e0b;"></i> تأكد من اختيار الفصل
+                                        الدراسي</li>
+                                    <li><i class="fas fa-info-circle" style="color: #f59e0b;"></i> راجع البيانات قبل
+                                        التصدير</li>
                                 </ul>
                             </div>
                         </div>
                         <div class="backup-card-action">
-                            <input type="file" id="excel-upload-input" accept=".xlsx, .xls" style="display: none;" onchange="handleDigitizationUpload(event)">
-                            <button class="backup-btn backup-btn-import" onclick="document.getElementById('excel-upload-input').click()">
+                            <input type="file" id="excel-upload-input" accept=".xlsx, .xls" style="display: none;"
+                                onchange="handleDigitizationUpload(event)">
+                            <button class="backup-btn backup-btn-import"
+                                onclick="document.getElementById('excel-upload-input').click()">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <span>اختيار ملف Excel و بدء المعالجة</span>
                             </button>
@@ -664,27 +828,34 @@
                 <div id="digitization-workspace" style="display: none; animation: fadeIn 0.5s ease;">
                     <!-- Controls Card -->
                     <div class="card" style="margin-bottom: 2rem; border-top: 4px solid var(--primary-color);">
-                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; align-items: end;">
+                        <div class="form-grid"
+                            style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; align-items: end;">
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
-                                    <span style="background: var(--primary-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">1</span>
+                                    <span
+                                        style="background: var(--primary-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">1</span>
                                     اختر الصفحة (كود الفوج):
                                 </label>
-                                <select id="excel-sheet-select" onchange="renderDigitizationSheet(true)" class="form-control" style="border-radius: 12px; padding: 10px 15px;"></select>
+                                <select id="excel-sheet-select" onchange="renderDigitizationSheet(true)"
+                                    class="form-control" style="border-radius: 12px; padding: 10px 15px;"></select>
                             </div>
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
-                                    <span style="background: var(--primary-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">2</span>
+                                    <span
+                                        style="background: var(--primary-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">2</span>
                                     اختر الفوج المقابل:
                                 </label>
-                                <select id="app-class-mapping-select" class="form-control" style="border-radius: 12px; padding: 10px 15px;"></select>
+                                <select id="app-class-mapping-select" class="form-control"
+                                    style="border-radius: 12px; padding: 10px 15px;"></select>
                             </div>
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
-                                    <span style="background: var(--primary-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">3</span>
+                                    <span
+                                        style="background: var(--primary-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">3</span>
                                     اختر الفصل الدراسي:
                                 </label>
-                                <select id="sync-trimester-select" class="form-control" style="border-radius: 12px; padding: 10px 15px;">
+                                <select id="sync-trimester-select" class="form-control"
+                                    style="border-radius: 12px; padding: 10px 15px;">
                                     <option value="1">الفصل الأول</option>
                                     <option value="2">الفصل الثاني</option>
                                     <option value="3">الفصل الثالث</option>
@@ -693,19 +864,24 @@
                         </div>
 
                         <!-- Action Buttons -->
-                        <div class="actions" style="justify-content: flex-start; gap: 1.2rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); flex-wrap: wrap;">
-                            <button class="btn btn-primary" onclick="syncGradingToDigitization()" style="padding: 12px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(43, 87, 154, 0.2);">
+                        <div class="actions"
+                            style="justify-content: flex-start; gap: 1.2rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="syncGradingToDigitization()"
+                                style="padding: 12px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(43, 87, 154, 0.2);">
                                 <i class="fas fa-sync-alt"></i> مزامنة النقاط من البرنامج
                             </button>
-                            <button class="btn btn-success" onclick="exportDigitizationExcel()" style="padding: 12px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); background-color: #10b981; border: none; font-weight: 700;">
+                            <button class="btn btn-success" onclick="exportDigitizationExcel()"
+                                style="padding: 12px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); background-color: #10b981; border: none; font-weight: 700;">
                                 <i class="fas fa-file-excel"></i> تصدير ملف Excel المحدّث
                             </button>
-                            <button class="btn btn-secondary" onclick="closeDigitizationWorkspace()" style="margin-right: auto; padding: 12px 20px; border-radius: 12px; opacity: 0.8; background-color: var(--danger-color); color: white;">
+                            <button class="btn btn-secondary" onclick="closeDigitizationWorkspace()"
+                                style="margin-right: auto; padding: 12px 20px; border-radius: 12px; opacity: 0.8; background-color: var(--danger-color); color: white;">
                                 <i class="fas fa-times"></i> إغلاق الملف
                             </button>
                         </div>
                         <!-- Sync Notification Bar -->
-                        <div id="sync-notify-bar" style="display:none; margin-top:1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #ef4444, #dc2626); color:white; border-radius:12px; font-weight:600; font-size:0.95rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">
+                        <div id="sync-notify-bar"
+                            style="display:none; margin-top:1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #ef4444, #dc2626); color:white; border-radius:12px; font-weight:600; font-size:0.95rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">
                         </div>
                     </div>
 
@@ -1030,7 +1206,8 @@
                 </div>
 
                 <div class="expiry-message-box">
-                    <p class="enjoy-text">سنكون سعداء جداً بانضمامك إلينا مرة أخرى وتجديد اشتراكك السنوي لمواصلة الرحلة معاً.</p>
+                    <p class="enjoy-text">سنكون سعداء جداً بانضمامك إلينا مرة أخرى وتجديد اشتراكك السنوي لمواصلة الرحلة
+                        معاً.</p>
                 </div>
 
                 <div class="modal-actions centered-actions">
@@ -1179,41 +1356,52 @@
     <!-- App Creator Info Modal -->
     <div id="creator-info-modal" class="modal-overlay">
         <div class="modal-content thank-you-modal-content" style="max-width: 480px; padding: 2.5rem 2rem;">
-            <div class="creator-dynamic-avatar" onclick="revealCreatorInfo()" style="cursor: pointer; transition: transform 0.3s ease;">
+            <div class="creator-dynamic-avatar" onclick="revealCreatorInfo()"
+                style="cursor: pointer; transition: transform 0.3s ease;">
                 <img src="assets/prof_logo.png" alt="الأستاذ تليلي">
             </div>
-            <p id="creator-click-hint" style="text-align: center; color: var(--primary-color); font-weight: bold; font-size: 0.9rem; margin-top: 5px; margin-bottom: 1.5rem; animation: pulse 2s infinite;">
+            <p id="creator-click-hint"
+                style="text-align: center; color: var(--primary-color); font-weight: bold; font-size: 0.9rem; margin-top: 5px; margin-bottom: 1.5rem; animation: pulse 2s infinite;">
                 <i class="fas fa-hand-pointer"></i> انقر على الشعار
             </p>
-            
+
             <div id="creator-hidden-info" class="creator-hidden-content">
-                <h3 style="color: var(--primary-color); margin-bottom: 0.5rem; font-size: 1.6rem; font-weight: 800;">الأستاذ تليلي محمد لمين</h3>
+                <h3 style="color: var(--primary-color); margin-bottom: 0.5rem; font-size: 1.6rem; font-weight: 800;">
+                    الأستاذ تليلي محمد لمين</h3>
                 <p style="font-weight: 600; color: #4b5563; margin-bottom: 1.8rem; font-size: 1.05rem;">
                     أستاذ مادة الرياضيات للتعليم المتوسط<br>
-                    <span style="font-size: 0.85em; color: var(--text-muted); font-weight: normal; display: inline-block; margin-top: 8px; padding: 5px 10px; background: rgba(0,0,0,0.03); border-radius: 20px;">
-                        <i class="fas fa-map-marker-alt" style="color: var(--primary-color);"></i> ولاية عنابة - المقاطعة 03 &nbsp;&bull;&nbsp; 
+                    <span
+                        style="font-size: 0.85em; color: var(--text-muted); font-weight: normal; display: inline-block; margin-top: 8px; padding: 5px 10px; background: rgba(0,0,0,0.03); border-radius: 20px;">
+                        <i class="fas fa-map-marker-alt" style="color: var(--primary-color);"></i> ولاية عنابة -
+                        المقاطعة 03 &nbsp;&bull;&nbsp;
                         <i class="fas fa-laptop-code" style="color: var(--primary-color);"></i> تصميم وتطوير الأنظمة
                     </span>
                 </p>
-                
+
                 <div style="text-align: right; margin-bottom: 1rem; padding-right: 5px;">
                     <strong style="color: var(--text-color); font-size: 0.95rem;">قنوات التواصل مع المطور:</strong>
                 </div>
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 2rem;">
-                    <a href="mailto:professor.tlili@gmail.com" target="_blank" class="btn btn-outline-social btn-outline-email" style="grid-column: 1 / -1; justify-content: center;">
+                    <a href="https://mail.google.com/mail/?view=cm&fs=1&to=professor.tlili@gmail.com" target="_blank"
+                        class="btn btn-outline-social btn-outline-email"
+                        style="grid-column: 1 / -1; justify-content: center;">
                         <i class="fas fa-envelope"></i> إرسال إيميل (Email)
                     </a>
-                    <a href="https://www.facebook.com/TLILIProfessor/" target="_blank" class="btn btn-outline-social btn-outline-facebook">
+                    <a href="https://www.facebook.com/TLILIProfessor/" target="_blank"
+                        class="btn btn-outline-social btn-outline-facebook">
                         <i class="fab fa-facebook-f"></i> فيسبوك
                     </a>
-                    <a href="https://www.instagram.com/pr_tlili/" target="_blank" class="btn btn-outline-social btn-outline-instagram">
+                    <a href="https://www.instagram.com/pr_tlili/" target="_blank"
+                        class="btn btn-outline-social btn-outline-instagram">
                         <i class="fab fa-instagram"></i> انستغرام
                     </a>
-                    <a href="https://t.me/Professor_Tlili" target="_blank" class="btn btn-outline-social btn-outline-telegram">
+                    <a href="https://t.me/Professor_Tlili" target="_blank"
+                        class="btn btn-outline-social btn-outline-telegram">
                         <i class="fab fa-telegram-plane"></i> تيليجرام
                     </a>
-                    <a href="https://professor--tlili.blogspot.com/" target="_blank" class="btn btn-outline-social btn-outline-website">
+                    <a href="https://professor--tlili.blogspot.com/" target="_blank"
+                        class="btn btn-outline-social btn-outline-website">
                         <i class="fas fa-globe"></i> الموقع
                     </a>
                 </div>
@@ -1370,8 +1558,10 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <h3 style="color: #16a34a;">تم استيراد قائمة التلاميذ بنجاح!</h3>
-            <p style="margin-top: 1rem; color: #4b5563;">تم استيراد البيانات للفوج التربوي: <strong id="import-class-display" style="color: var(--primary-color);">---</strong></p>
-            <p style="color: #4b5563;">عدد التلاميذ في القائمة: <strong id="import-count-display" style="color: var(--primary-color);">0</strong></p>
+            <p style="margin-top: 1rem; color: #4b5563;">تم استيراد البيانات للفوج التربوي: <strong
+                    id="import-class-display" style="color: var(--primary-color);">---</strong></p>
+            <p style="color: #4b5563;">عدد التلاميذ في القائمة: <strong id="import-count-display"
+                    style="color: var(--primary-color);">0</strong></p>
             <div class="modal-actions centered-actions">
                 <button class="btn btn-primary" onclick="closeImportSuccessModal()">حسناً، فهمت</button>
             </div>

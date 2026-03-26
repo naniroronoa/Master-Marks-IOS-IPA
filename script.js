@@ -97,8 +97,13 @@ const views = {
     monitoring: document.getElementById('monitoring-section'),
     digitization: document.getElementById('digitization-section'),
     backup: document.getElementById('backup-section'),
-    activation: document.getElementById('activation-section')
+    activation: document.getElementById('activation-section'),
+    absences: document.getElementById('absences-section')
 };
+
+// --- حالة الغيابات (Absences State) ---
+let currentAbsenceDate = new Date().toISOString().split('T')[0];
+let calendarViewDate = new Date(); // التاريخ المعروض في التقويم (الشهر/السنة)
 
 // --- الإعداد الأولي (Initialization) ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -109,10 +114,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     initFullscreenLongPress();
     initDarkMode();
     initAppTheme(); // Initialize custom theme
-    initSidebarGestures();
 
     document.body.classList.add('on-home-page'); // Default to home page
-    
+
     // Auto-collapse sidebar on mobile devices
     if (window.innerWidth <= 768) {
         document.body.classList.add('sidebar-collapsed');
@@ -239,6 +243,14 @@ async function loadAppState() {
                     }
                     if (!s.gradingData[tk]) {
                         s.gradingData[tk] = { monitoring: '', assignment: '', exam: '', continuousEval: 0, average: 0, score: 0, appreciation: '' };
+                        dataChanged = true;
+                    }
+                    if (!s.absenceData) {
+                        s.absenceData = createEmptyAbsenceData();
+                        dataChanged = true;
+                    }
+                    if (!s.absenceData[tk]) {
+                        s.absenceData[tk] = {};
                         dataChanged = true;
                     }
                 }
@@ -636,7 +648,7 @@ window.switchSection = function (e, sectionId) {
     if (targetSection) targetSection.classList.add('active-section');
 
     // التحكم في القوائم الفرعية (Submenus)
-    const submenuIds = ['continuous-submenu', 'monitoring-submenu', 'grading-submenu', 'lists-submenu'];
+    const submenuIds = ['continuous-submenu', 'monitoring-submenu', 'grading-submenu', 'lists-submenu', 'absences-submenu'];
     const targetSubmenuId = (sectionId === 'student-lists' ? 'lists' : sectionId) + '-submenu';
 
     submenuIds.forEach(id => {
@@ -692,6 +704,7 @@ function initSidebarSubmenu(sectionId) {
     if (sectionId === 'monitoring') listId = 'sidebar-monitoring-class-list';
     if (sectionId === 'grading') listId = 'sidebar-grading-class-list';
     if (sectionId === 'lists') listId = 'sidebar-lists-class-list';
+    if (sectionId === 'absences') listId = 'sidebar-absences-class-list';
 
     const classList = document.getElementById(listId);
     if (!classList) return;
@@ -728,6 +741,7 @@ function initSidebarSubmenu(sectionId) {
     if (sectionId === 'monitoring') submenuId = 'monitoring-submenu';
     if (sectionId === 'grading') submenuId = 'grading-submenu';
     if (sectionId === 'lists') submenuId = 'lists-submenu';
+    if (sectionId === 'absences') submenuId = 'absences-submenu';
 
     const trimBtns = document.querySelectorAll(`#${submenuId} .trimester-select-grid .sub-btn`);
     trimBtns.forEach((btn, idx) => {
@@ -1144,14 +1158,23 @@ function initEmptyStudents(count) {
 
 function createEmptyStudent() {
     return {
-        id: Date.now() + Math.random(),
+        id: "std_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
         surname: '',
         name: '',
         dob: '',
         monitoringData: createEmptyMonitoringData(),
         continuousData: createEmptyContinuousData(),
         gradingData: createEmptyGradingData(),
+        absenceData: createEmptyAbsenceData(),
         activeTrimesters: [1, 2, 3]
+    };
+}
+
+function createEmptyAbsenceData() {
+    return {
+        t1: {},
+        t2: {},
+        t3: {}
     };
 }
 
@@ -1191,7 +1214,6 @@ function initClassTabs(sectionStr) {
         return;
     }
 
-    const container = document.getElementById(targetTabsId);
     if (!container) return;
 
     container.innerHTML = '';
@@ -1222,7 +1244,8 @@ function populateHeaderInfo() {
         document.getElementById('teacher-info-header'),
         document.getElementById('teacher-info-header-monitoring'),
         document.getElementById('teacher-info-header-grading'),
-        document.getElementById('teacher-info-header-lists')
+        document.getElementById('teacher-info-header-lists'),
+        document.getElementById('teacher-info-header-absences')
     ];
 
     const info = appState.teacherInfo;
@@ -1291,6 +1314,9 @@ function renderCurrentView() {
         renderContinuousTable();
     } else if (activeSection.id === 'digitization-section') {
         renderDigitizationSheet();
+    } else if (activeSection.id === 'absences-section') {
+        populateHeaderInfo();
+        renderAbsencesSection();
     }
 }
 
@@ -1467,26 +1493,37 @@ function renderStudentListTable() {
 
     const controlsContainer = document.querySelector('#student-lists-section .table-controls');
     controlsContainer.innerHTML = '';
-    // Styling is handled by CSS .table-controls
+    controlsContainer.style.display = 'flex';
+    controlsContainer.style.justifyContent = 'space-between';
+    controlsContainer.style.alignItems = 'center';
+    controlsContainer.style.marginBottom = '1.5rem';
+
+    const leftGroup = document.createElement('div');
+    leftGroup.style.display = 'flex';
+    leftGroup.style.gap = '0.5rem';
+
+    const rightGroup = document.createElement('div');
+    rightGroup.style.display = 'flex';
+    rightGroup.style.gap = '0.5rem';
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
     toggleBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل القائمة';
     toggleBtn.onclick = toggleEditMode;
-    controlsContainer.appendChild(toggleBtn);
+    rightGroup.appendChild(toggleBtn);
 
     if (isEditMode) {
         const addBtn = document.createElement('button');
         addBtn.className = 'btn btn-gradient-purple btn-action';
         addBtn.innerHTML = '<i class="fas fa-plus"></i> إضافة تلميذ';
         addBtn.onclick = addStudentToCurrentList;
-        controlsContainer.appendChild(addBtn);
+        rightGroup.appendChild(addBtn);
 
         const deleteAllBtn = document.createElement('button');
         deleteAllBtn.className = 'btn btn-danger btn-action';
         deleteAllBtn.innerHTML = '<i class="fas fa-trash"></i> حذف جميع البيانات';
         deleteAllBtn.onclick = deleteAllStudents;
-        controlsContainer.appendChild(deleteAllBtn);
+        rightGroup.appendChild(deleteAllBtn);
 
         const importBtnLabel = document.createElement('label');
         importBtnLabel.className = 'btn btn-dark-success btn-action';
@@ -1499,8 +1536,10 @@ function renderStudentListTable() {
         fileInput.style.display = 'none';
         fileInput.onchange = handleFileUpload;
         importBtnLabel.appendChild(fileInput);
-        controlsContainer.appendChild(importBtnLabel);
+        rightGroup.appendChild(importBtnLabel);
     }
+
+
 
     const exportWordBtn = document.createElement('button');
     exportWordBtn.className = 'btn btn-secondary btn-action';
@@ -1508,7 +1547,10 @@ function renderStudentListTable() {
     exportWordBtn.style.color = 'white';
     exportWordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
     exportWordBtn.onclick = exportStudentListToWord;
-    controlsContainer.appendChild(exportWordBtn);
+    leftGroup.appendChild(exportWordBtn);
+
+    controlsContainer.appendChild(rightGroup);
+    controlsContainer.appendChild(leftGroup);
 
     const tbody = document.getElementById('student-list-body');
     tbody.innerHTML = '';
@@ -1945,21 +1987,34 @@ function renderContinuousTable() {
 
     if (controlsContainer) {
         controlsContainer.innerHTML = '';
-        // Styling is handled by CSS .table-controls
+        controlsContainer.style.display = 'flex';
+        controlsContainer.style.justifyContent = 'space-between';
+        controlsContainer.style.alignItems = 'center';
+        controlsContainer.style.marginBottom = '1.5rem';
+
+        const rightGroup = document.createElement('div');
+        rightGroup.style.display = 'flex';
+        rightGroup.style.gap = '0.5rem';
 
         const editBtn = document.createElement('button');
         editBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
         editBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل البيانات';
         editBtn.onclick = toggleEditMode;
-        controlsContainer.appendChild(editBtn);
+        rightGroup.appendChild(editBtn);
 
         if (isEditMode) {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-danger btn-action';
             clearBtn.innerHTML = '<i class="fas fa-eraser"></i> حذف جميع البيانات';
             clearBtn.onclick = () => clearAllMarks('continuous');
-            controlsContainer.appendChild(clearBtn);
+            rightGroup.appendChild(clearBtn);
         }
+
+        const leftGroup = document.createElement('div');
+        leftGroup.style.display = 'flex';
+        leftGroup.style.gap = '0.5rem';
+
+
 
         const wordBtn = document.createElement('button');
         wordBtn.className = 'btn btn-secondary btn-action';
@@ -1967,8 +2022,10 @@ function renderContinuousTable() {
         wordBtn.style.color = 'white';
         wordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
         wordBtn.onclick = exportContinuousToWord;
-        wordBtn.style.marginRight = 'auto'; // Push to left side
-        controlsContainer.appendChild(wordBtn);
+        leftGroup.appendChild(wordBtn);
+
+        controlsContainer.appendChild(rightGroup);
+        controlsContainer.appendChild(leftGroup);
     }
 
     const table = document.querySelector('.continuous-table');
@@ -2224,21 +2281,35 @@ function renderMonitoringTable() {
 
     if (controlsContainer) {
         controlsContainer.innerHTML = '';
-        // Styling is handled by CSS .table-controls
+        controlsContainer.style.display = 'flex';
+        controlsContainer.style.justifyContent = 'space-between';
+        controlsContainer.style.alignItems = 'center';
+        controlsContainer.style.marginBottom = '1.5rem';
+
+        const rightGroup = document.createElement('div');
+        rightGroup.style.display = 'flex';
+        rightGroup.style.gap = '0.5rem';
 
         const editBtn = document.createElement('button');
         editBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
         editBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل البيانات';
         editBtn.onclick = toggleEditMode;
-        controlsContainer.appendChild(editBtn);
+        rightGroup.appendChild(editBtn);
 
         if (isEditMode) {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-danger btn-action';
             clearBtn.innerHTML = '<i class="fas fa-eraser"></i> حذف جميع البيانات';
             clearBtn.onclick = () => clearAllMarks('monitoring');
-            controlsContainer.appendChild(clearBtn);
+            rightGroup.appendChild(clearBtn);
         }
+
+        const leftGroup = document.createElement('div');
+        leftGroup.style.display = 'flex';
+        leftGroup.style.gap = '0.5rem';
+
+
+
 
         const wordBtn = document.createElement('button');
         wordBtn.className = 'btn btn-secondary btn-action';
@@ -2252,8 +2323,10 @@ function renderMonitoringTable() {
                 alert('عذراً، وظيفة التصدير قيد التحميل. يرجى المحاولة بعد ثانية.');
             }
         };
-        wordBtn.style.marginRight = 'auto'; // Push to left side
-        controlsContainer.appendChild(wordBtn);
+        leftGroup.appendChild(wordBtn);
+
+        controlsContainer.appendChild(rightGroup);
+        controlsContainer.appendChild(leftGroup);
     }
 
     const table = document.querySelector('.monitoring-table');
@@ -2539,28 +2612,37 @@ function renderGradingTable() {
     const controlsContainer = document.querySelector('#grading-section .table-controls');
     if (controlsContainer) {
         controlsContainer.innerHTML = '';
-        // Styling is handled by CSS .table-controls
+        controlsContainer.style.display = 'flex';
+        controlsContainer.style.justifyContent = 'space-between';
+        controlsContainer.style.alignItems = 'center';
+
+        const rightGroup = document.createElement('div');
+        rightGroup.style.display = 'flex';
+        rightGroup.style.gap = '0.5rem';
 
         const editBtn = document.createElement('button');
         editBtn.className = isEditMode ? 'btn btn-success btn-action' : 'btn btn-gradient-purple btn-action';
         editBtn.innerHTML = isEditMode ? '<i class="fas fa-save"></i> حفظ البيانات' : '<i class="fas fa-edit"></i> تعديل البيانات';
         editBtn.onclick = toggleEditMode;
-        controlsContainer.appendChild(editBtn);
+        rightGroup.appendChild(editBtn);
 
         if (isEditMode) {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-danger btn-action';
             clearBtn.innerHTML = '<i class="fas fa-eraser"></i> حذف جميع البيانات';
             clearBtn.onclick = () => clearAllMarks('grading');
-            controlsContainer.appendChild(clearBtn);
+            rightGroup.appendChild(clearBtn);
         }
+
+        const leftGroup = document.createElement('div');
+        leftGroup.style.display = 'flex';
+        leftGroup.style.gap = '0.5rem';
 
         const statsBtn = document.createElement('button');
         statsBtn.className = 'btn btn-vibrant-stats btn-action';
         statsBtn.innerHTML = '<i class="fas fa-chart-bar"></i> إحصائيات مفصلة';
         statsBtn.onclick = showStatisticsModal;
-        statsBtn.style.marginRight = 'auto'; // Push to left side
-        controlsContainer.appendChild(statsBtn);
+        leftGroup.appendChild(statsBtn);
 
         const wordBtn = document.createElement('button');
         wordBtn.className = 'btn btn-secondary btn-action';
@@ -2568,7 +2650,10 @@ function renderGradingTable() {
         wordBtn.style.color = 'white';
         wordBtn.innerHTML = '<i class="fas fa-file-word"></i> تصدير Word';
         wordBtn.onclick = () => window.exportGradingToWord();
-        controlsContainer.appendChild(wordBtn);
+        leftGroup.appendChild(wordBtn);
+
+        controlsContainer.appendChild(rightGroup);
+        controlsContainer.appendChild(leftGroup);
     }
 
     const table = document.getElementById('gradingTable');
@@ -5401,41 +5486,9 @@ window.exportDigitizationExcel = async function () {
             }
             return;
         }
-        // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const isNativeHandled = await window.saveAndShareWithCapacitor(finalFileName, blob);
-        if (isNativeHandled) {
-            return;
-        }
 
         // --- Fallback: browser-style download ---
-        try {
-            if (window.showSaveFilePicker) {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: finalFileName,
-                    types: [{
-                        description: 'Excel Spreadsheet',
-                        accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']}
-                    }]
-                });
-                
-                const writable = await handle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                
-                if (window.showActivationToast) {
-                    window.showActivationToast('تم حفظ ملف Excel بنجاح ✓', 'success');
-                }
-                return;
-            }
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error('Excel save failed:', err);
-            }
-            return;
-        }
-
-        // Traditional fallback if showSaveFilePicker is not supported
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -5505,95 +5558,12 @@ window.closeWordPreview = function () {
     document.body.classList.remove('modal-open');
 };
 
-window.saveAndShareWithCapacitor = async function(fileName, blob) {
-    if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Filesystem || !window.Capacitor.Plugins.Share) {
-        return false;
-    }
-    
-    try {
-        const { Filesystem, Share } = window.Capacitor.Plugins;
-        
-        // Convert Blob to Base64
-        const base64Data = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-        
-        // Save temporary file
-        const savedFile = await Filesystem.writeFile({
-            path: fileName,
-            data: base64Data,
-            directory: 'CACHE'
-        });
-        
-        // Trigger native Share Sheet
-        await Share.share({
-            title: fileName,
-            url: savedFile.uri,
-            dialogTitle: 'اختر مكان حفظ الملف'
-        });
-        
-        return true;
-    } catch (e) {
-        console.error("Capacitor Native Save/Share Error:", e);
-        return false;
-    }
-};
-
 window.executeWordDownload = async function () {
     if (!currentWordExportData.html) return;
 
-    let { html, filename } = currentWordExportData;
-    let blob;
+    const { html, filename } = currentWordExportData;
 
-    // Use html-docx-js to create a real .docx if available (required for iOS Word to open it)
-    if (typeof htmlDocx !== 'undefined') {
-        try {
-            // iOS Word strictly rejects corrupted XML. The spoofed MSO namespaces in the raw HTML
-            // can cause html-docx-js to generate invalid .docx files. We sanitize it first.
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            // 1. Remove MSO namespaces which confuse the OOXML parser
-            doc.documentElement.removeAttribute('xmlns:o');
-            doc.documentElement.removeAttribute('xmlns:w');
-            doc.documentElement.removeAttribute('xmlns');
-            
-            // 2. Ensure images have proper styling for Word
-            const images = doc.querySelectorAll('img');
-            images.forEach(img => {
-                if (!img.style.width && img.width) img.style.width = img.width + 'px';
-                if (!img.style.height && img.height) img.style.height = img.height + 'px';
-            });
-
-            // 3. Remove @page CSS which might cause parsing issues
-            const styles = doc.querySelectorAll('style');
-            styles.forEach(s => {
-                s.innerHTML = s.innerHTML.replace(/@page\s*{[^}]*}/g, '');
-                s.innerHTML = s.innerHTML.replace(/div\.Section1\s*{[^}]*}/g, '');
-            });
-
-            const cleanHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
-            blob = htmlDocx.asBlob(cleanHtml);
-            filename = filename.replace(/\.doc$/, '.docx');
-        } catch (e) {
-            console.error("HTML to Docx sanitization failed, falling back to basic doc:", e);
-            blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-        }
-    } else {
-        blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    }
-
-    // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
-    const isNativeHandled = await window.saveAndShareWithCapacitor(filename, blob);
-    if (isNativeHandled) {
-        closeWordPreview();
-        return;
-    }
-
-    // --- Try Electron save dialog next ---
+    // --- Try Electron save dialog first ---
     if (window.electronAPI && window.electronAPI.saveFile) {
         // Convert HTML string to something Electron can handle as a buffer
         // Note: We include the BOM \ufeff for Word encoding
@@ -5617,39 +5587,10 @@ window.executeWordDownload = async function () {
     }
 
     // --- Fallback: browser-style download ---
-    try {
-        if (window.showSaveFilePicker) {
-            const handle = await window.showSaveFilePicker({
-                suggestedName: filename,
-                types: [{
-                    description: 'Word Document',
-                    accept: {'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'], 'application/msword': ['.doc']}
-                }]
-            });
-            
-            showDownloadNotification();
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            
-            if (window.showActivationToast) {
-                window.showActivationToast('تم حفظ الملف بنجاح ✓', 'success');
-            }
-            closeWordPreview();
-            return;
-        }
-    } catch (err) {
-        if (err.name !== 'AbortError') {
-            console.error('File save failed:', err);
-        }
-        closeWordPreview();
-        return;
-    }
-
-    // Traditional fallback if showSaveFilePicker is not supported (e.g. Safari/iOS)
     showDownloadNotification();
 
     setTimeout(() => {
+        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -5801,40 +5742,8 @@ window.exportAppData = async function () {
             return;
         }
 
-        // --- Try Capacitor Native Share Sheet first (iOS/Android) ---
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const isNativeHandled = await window.saveAndShareWithCapacitor(filename, blob);
-        if (isNativeHandled) {
-            return;
-        }
-
         // --- Fallback: browser-style download ---
-        try {
-            if (window.showSaveFilePicker) {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: filename,
-                    types: [{
-                        description: 'JSON Data Backup',
-                        accept: {'application/json': ['.json']}
-                    }]
-                });
-                
-                const writable = await handle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                
-                if (window.showActivationToast) {
-                    window.showActivationToast('تم تصدير ملف البيانات بنجاح', 'success');
-                }
-                return;
-            }
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error('Data backup save failed:', err);
-            }
-            return;
-        }
-
+        const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
 
@@ -5925,61 +5834,6 @@ window.executeImportAppData = async function () {
     }
 };
 
-// --- Sidebar Swipe Gestures ---
-function initSidebarGestures() {
-    const toggleBtn = document.getElementById('floating-sidebar-toggle');
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    
-    if (!toggleBtn || !sidebar) return;
-
-    let touchStartX = 0;
-    let touchEndX = 0;
-    const threshold = 50; // minimum distance for a swipe in pixels
-
-    // 1. Open sidebar: Swipe LEFT on the toggle button (towards the screen center)
-    toggleBtn.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, { passive: true });
-
-    toggleBtn.addEventListener('touchend', e => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleToggleSwipe();
-    }, { passive: true });
-
-    function handleToggleSwipe() {
-        // swipe logic: touchStartX - touchEndX > threshold means move LEFT
-        if (touchStartX - touchEndX > threshold) {
-            if (document.body.classList.contains('sidebar-collapsed')) {
-                window.toggleSidebar();
-            }
-        }
-    }
-
-    // 2. Close sidebar: Swipe RIGHT inside the sidebar or on the overlay
-    const closeTargets = [sidebar, overlay].filter(el => el !== null);
-    
-    closeTargets.forEach(target => {
-        target.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, { passive: true });
-
-        target.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSidebarSwipe();
-        }, { passive: true });
-    });
-
-    function handleSidebarSwipe() {
-        // swipe logic: touchEndX - touchStartX > threshold means move RIGHT
-        if (touchEndX - touchStartX > threshold) {
-            if (!document.body.classList.contains('sidebar-collapsed')) {
-                window.toggleSidebar();
-            }
-        }
-    }
-}
-
 // --- Theme Management logic ---
 const appThemes = [
     { id: 'default', name: 'الافتراضي', previewClass: 'preview-default' },
@@ -6050,4 +5904,660 @@ function setTheme(themeId, shouldSave = true) {
 function closeThemePicker() {
     document.getElementById('theme-picker-modal').classList.remove('open');
 }
+
+// --- منطق الغيابات (Absences Logic) ---
+function renderAbsencesSection() {
+    const headerAbsences = document.getElementById("teacher-info-header-absences");
+    if (headerAbsences) {
+        const info = appState.teacherInfo;
+        const currentClass = appState.classes[currentActiveClassIndex] || { name: "---", students: [] };
+        const studentCount = currentClass.students ? currentClass.students.filter(s =>
+            !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester)
+        ).length : 0;
+
+        headerAbsences.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">الأستاذ</span>
+                <span class="info-value">${info.name || "---"}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">الفوج التربوي</span>
+                <span class="info-value"><bdi dir="rtl">${currentClass.name}</bdi></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">الفصل</span>
+                <span class="info-value">${currentTrimester}</span>
+            </div>
+             <div class="info-item">
+                <span class="info-label">عدد التلاميذ</span>
+                <span class="info-value">${studentCount}</span>
+            </div>
+        `;
+    }
+
+    // --- تحديث توقيت التقويم حسب الفصل المختار ---
+    const academicYear = appState.teacherInfo.year || "2025 / 2026";
+    const years = academicYear.split("/").map(y => parseInt(y.trim()));
+    const startYear = years[0] || new Date().getFullYear();
+    const endYear = years[1] || startYear + 1;
+
+    // تحديد الشهر والسنة الافتراضية لكل فصل حسب طلب الأستاذ
+    let targetMonth, targetYear;
+    if (currentTrimester === 1) {
+        targetMonth = 8; // سبتمبر (0-indexed)
+        targetYear = startYear;
+    } else if (currentTrimester === 2) {
+        targetMonth = 0; // جانفي
+        targetYear = endYear;
+    } else {
+        targetMonth = 3; // أفريل
+        targetYear = endYear;
+    }
+
+    // إذا كان التاريخ المعروض حالياً خارج شهور الفصل، نضبطه على الشهر الأول للفصل
+    const currentMonth = calendarViewDate.getMonth();
+    const currentYear = calendarViewDate.getFullYear();
+    
+    let isOutOfRange = false;
+    if (currentTrimester === 1 && (currentYear !== startYear || currentMonth < 8)) isOutOfRange = true;
+    if (currentTrimester === 2 && (currentYear !== endYear || currentMonth > 2)) isOutOfRange = true;
+    if (currentTrimester === 3 && (currentYear !== endYear || currentMonth < 3 || currentMonth > 5)) isOutOfRange = true;
+
+    if (isOutOfRange) {
+        calendarViewDate = new Date(targetYear, targetMonth, 1);
+    }
+
+    renderAbsencesCalendar();
+    renderAbsenceStudentList();
+    renderAbsenceStats();
+    
+    document.getElementById("absences-stats-trimester").textContent = currentTrimester;
+}
+
+function renderAbsencesCalendar() {
+    const grid = document.getElementById("calendar-days-grid");
+    const monthYearTitle = document.getElementById("calendar-month-year");
+    if (!grid || !monthYearTitle) return;
+
+    grid.innerHTML = "";
+    const year = calendarViewDate.getFullYear();
+    const month = calendarViewDate.getMonth();
+
+    const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    monthYearTitle.textContent = `${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement("div");
+        emptyCell.className = "calendar-day empty-day";
+        grid.appendChild(emptyCell);
+    }
+
+    const currentClass = appState.classes[currentActiveClassIndex];
+    const trimKey = `t${currentTrimester}`;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const dayCell = document.createElement("div");
+        dayCell.className = "calendar-day";
+        dayCell.textContent = day;
+
+        const dateObj = new Date(year, month, day);
+        if (dateObj.getDay() === 5 || dateObj.getDay() === 6) {
+            dayCell.classList.add("weekend");
+        }
+
+        if (dateStr === currentAbsenceDate) dayCell.classList.add("selected");
+        if (dateStr === new Date().toISOString().split("T")[0]) dayCell.classList.add("today");
+
+        const hasAbsences = currentClass && currentClass.students.some(s => 
+            s.absenceData && s.absenceData[trimKey] && s.absenceData[trimKey][dateStr]
+        );
+        if (hasAbsences) dayCell.classList.add("has-absences");
+
+        dayCell.onclick = () => selectAbsenceDate(dateStr);
+        grid.appendChild(dayCell);
+    }
+}
+
+window.changeAbsenceMonth = function(offset) {
+    const tempDate = new Date(calendarViewDate);
+    tempDate.setMonth(tempDate.getMonth() + offset);
+    const month = tempDate.getMonth();
+    const year = tempDate.getFullYear();
+
+    // استخراج السنوات من العام الدراسي
+    const academicYear = appState.teacherInfo.year || "2025 / 2026";
+    const years = academicYear.split("/").map(y => parseInt(y.trim()));
+    const startYear = years[0];
+    const endYear = years[1];
+
+    // تقييد التنقل حسب الفصل وشهوره المحددة
+    if (currentTrimester === 1) { // T1: Sept (8) to Dec (11)
+        if (year !== startYear || month < 8 || month > 11) return;
+    } else if (currentTrimester === 2) { // T2: Jan (0) to Mar (2)
+        if (year !== endYear || month < 0 || month > 2) return;
+    } else if (currentTrimester === 3) { // T3: Apr (3) to Jun (5)
+        if (year !== endYear || month < 3 || month > 5) return;
+    }
+
+    calendarViewDate = tempDate;
+    renderAbsencesCalendar();
+};
+
+window.selectAbsenceDate = function(dateStr) {
+    currentAbsenceDate = dateStr;
+    const dateLabel = document.getElementById("selected-absence-date");
+    if (dateLabel) {
+        const dateObj = new Date(dateStr);
+        const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+        const day = dateObj.getDate();
+        const month = monthNames[dateObj.getMonth()];
+        const year = dateObj.getFullYear();
+        dateLabel.textContent = `${day} ${month} ${year}`;
+    }
+    renderAbsencesCalendar();
+    renderAbsenceStudentList();
+    
+    // إظهار النافذة المنبثقة
+    const modal = document.getElementById("absences-list-modal");
+    if (modal) modal.classList.add("open");
+};
+
+window.closeAbsencesListModal = function() {
+    const modal = document.getElementById("absences-list-modal");
+    if (modal) modal.classList.remove("open");
+};
+
+function renderAbsenceStudentList() {
+    const tbody = document.getElementById("absences-student-list-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const currentClass = appState.classes[currentActiveClassIndex];
+    if (!currentClass) return;
+
+    const trimKey = `t${currentTrimester}`;
+    const filteredStudents = currentClass.students.filter(s => 
+        !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester)
+    );
+
+    filteredStudents.forEach((student, index) => {
+        const isAbsent = student.absenceData && student.absenceData[trimKey] && student.absenceData[trimKey][currentAbsenceDate];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td style="text-align: right; cursor: pointer;" onclick="toggleAbsence('${student.id}')">
+                ${student.surname} ${student.name}
+            </td>
+            <td>
+                <button class="btn-absence-toggle ${isAbsent ? "absent" : ""}" onclick="toggleAbsence('${student.id}')">
+                    ${isAbsent ? "غائب" : "حاضر"}
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.toggleAbsence = function(studentId) {
+    const currentClass = appState.classes[currentActiveClassIndex];
+    if (!currentClass) return;
+    const student = currentClass.students.find(s => s.id === studentId);
+    if (!student) return;
+
+    const trimKey = `t${currentTrimester}`;
+    if (!student.absenceData) student.absenceData = createEmptyAbsenceData();
+    if (!student.absenceData[trimKey]) student.absenceData[trimKey] = {};
+
+    if (student.absenceData[trimKey][currentAbsenceDate]) {
+        delete student.absenceData[trimKey][currentAbsenceDate];
+    } else {
+        student.absenceData[trimKey][currentAbsenceDate] = true;
+    }
+
+    saveAppState(true);
+    renderAbsencesCalendar();
+    renderAbsenceStudentList();
+    renderAbsenceStats();
+};
+
+let absenceStatsSortColumn = null;
+let absenceStatsSortDirection = 'asc';
+
+window.sortAbsenceStats = function(column) {
+    if (column === 'name') {
+        absenceStatsSortColumn = 'name';
+        absenceStatsSortDirection = 'asc';
+    } else {
+        if (absenceStatsSortColumn === column) {
+            absenceStatsSortDirection = absenceStatsSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            absenceStatsSortColumn = column;
+            absenceStatsSortDirection = 'desc';
+        }
+    }
+    
+    const nameHeader = document.getElementById("th-absences-name");
+    const countHeader = document.getElementById("th-absences-count");
+    
+    if (nameHeader) {
+        let icon = '<i class="fas fa-sort" style="opacity:0.3"></i>';
+        if (absenceStatsSortColumn === 'name') {
+            icon = '<i class="fas fa-sort-down"></i>';
+        }
+        nameHeader.innerHTML = `اللقب و الاسم ${icon}`;
+    }
+    
+    if (countHeader) {
+        let icon = '<i class="fas fa-sort" style="opacity:0.3"></i>';
+        if (absenceStatsSortColumn === 'count') {
+            icon = absenceStatsSortDirection === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
+        }
+        countHeader.innerHTML = `عدد مرات الغياب ${icon}`;
+    }
+
+    renderAbsenceStats();
+};
+
+function renderAbsenceStats() {
+    const tbody = document.getElementById("absences-stats-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const currentClass = appState.classes[currentActiveClassIndex];
+    if (!currentClass) return;
+
+    const trimKey = `t${currentTrimester}`;
+    let studentsWithStats = currentClass.students
+        .filter(s => !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester))
+        .map(student => {
+            const absences = student.absenceData && student.absenceData[trimKey] ? Object.keys(student.absenceData[trimKey]) : [];
+            const formattedDates = absences.sort().map(dateStr => {
+                const d = new Date(dateStr);
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${year}-${month}-${day}`;
+            });
+            return {
+                student: student,
+                absencesCount: absences.length,
+                absencesDates: formattedDates
+            };
+        })
+        .filter(item => item.absencesCount > 0);
+
+    // Sorting logic
+    if (absenceStatsSortColumn) {
+        studentsWithStats.sort((a, b) => {
+            if (absenceStatsSortColumn === 'name') {
+                const nameA = (a.student.surname + " " + a.student.name).trim();
+                const nameB = (b.student.surname + " " + b.student.name).trim();
+                return absenceStatsSortDirection === 'asc' ? nameA.localeCompare(nameB, 'ar') : nameB.localeCompare(nameA, 'ar');
+            } else if (absenceStatsSortColumn === 'count') {
+                return absenceStatsSortDirection === 'asc' ? a.absencesCount - b.absencesCount : b.absencesCount - a.absencesCount;
+            }
+            return 0;
+        });
+    }
+
+    studentsWithStats.forEach((item, index) => {
+        const student = item.student;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td style="width: 1%; white-space: nowrap;">${index + 1}</td>
+            <td style="width: 1%; white-space: nowrap; text-align: right;">${student.surname} ${student.name}</td>
+            <td style="width: 1%; white-space: nowrap; font-weight: 700; color: var(--danger-color);">${item.absencesCount}</td>
+            <td style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+                ${item.absencesDates.join(" ، ")}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    if (tbody.innerHTML === "") {
+        tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding: 2rem; color: var(--text-muted);'>لا توجد غيابات مسجلة لهذا الفصل حتى الآن.</td></tr>";
+    }
+}
+
+window.openAbsencesStatsModal = function() {
+    const modal = document.getElementById("absences-stats-modal");
+    if (modal) {
+        const tableView = document.getElementById("absences-stats-table-view");
+        const chartView = document.getElementById("absences-stats-chart-view");
+        const btn = document.getElementById("btn-toggle-chart");
+        
+        if (tableView && chartView) {
+            tableView.classList.remove("hidden");
+            chartView.classList.add("hidden");
+            if (btn) {
+                btn.style.backgroundColor = "";
+                btn.classList.remove("btn-danger");
+                btn.classList.add("btn-primary");
+                btn.innerHTML = '<i class="fas fa-chart-pie"></i> تحليل النتائج';
+            }
+        }
+        
+        modal.classList.add("open");
+    }
+};
+
+window.closeAbsencesStatsModal = function() {
+    const modal = document.getElementById("absences-stats-modal");
+    if (modal) modal.classList.remove("open");
+};
+
+window.toggleAbsencesChart = function() {
+    const tableView = document.getElementById("absences-stats-table-view");
+    const chartView = document.getElementById("absences-stats-chart-view");
+    const btn = document.getElementById("btn-toggle-chart");
+    
+    if (tableView && chartView) {
+        if (chartView.style.display !== "block") {
+            tableView.classList.add("hidden");
+            chartView.classList.remove("hidden");
+            tableView.style.display = "none";
+            chartView.style.display = "block";
+            
+            if (btn) {
+                btn.classList.remove("btn-primary");
+                btn.classList.add("btn-danger");
+                btn.style.backgroundColor = "var(--danger-color)";
+                btn.innerHTML = '<i class="fas fa-times"></i> إغلاق التحليل';
+            }
+            buildAbsencesChart();
+        } else {
+            chartView.classList.add("hidden");
+            tableView.classList.remove("hidden");
+            chartView.style.display = "none";
+            tableView.style.display = "block";
+            
+            if (btn) {
+                btn.style.backgroundColor = "";
+                btn.classList.remove("btn-danger");
+                btn.classList.add("btn-primary");
+                btn.innerHTML = '<i class="fas fa-chart-pie"></i> تحليل النتائج';
+            }
+        }
+    }
+};
+
+function buildAbsencesChart() {
+    const container = document.getElementById("absences-chart-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const currentClass = appState.classes[currentActiveClassIndex];
+    if (!currentClass) return;
+
+    const trimKey = `t${currentTrimester}`;
+    const filteredStudents = currentClass.students.filter(s => 
+        !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester)
+    );
+
+    const monthCounts = {};
+    const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    let totalAbsences = 0;
+
+    filteredStudents.forEach(student => {
+        if (student.absenceData && student.absenceData[trimKey]) {
+            Object.keys(student.absenceData[trimKey]).forEach(dateStr => {
+                const dateObj = new Date(dateStr);
+                const monthName = monthNames[dateObj.getMonth()];
+                if (!monthCounts[monthName]) monthCounts[monthName] = 0;
+                monthCounts[monthName]++;
+                totalAbsences++;
+            });
+        }
+    });
+
+    if (totalAbsences === 0) {
+        container.innerHTML = "<div style='text-align:center; padding: 2rem; color: var(--text-muted);'>لا توجد غيابات مسجلة لتحليلها في هذا الفصل.</div>";
+        return;
+    }
+
+    const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
+        return monthNames.indexOf(a) - monthNames.indexOf(b);
+    });
+
+    // Create Pie Chart logic using conic-gradient
+    let gradientParts = [];
+    let currentAngle = 0;
+    const colors = ["#FFB7B2", "#B5EAD7", "#C7CEEA", "#FFDAC1", "#E2F0CB", "#FF9AA2", "#F3B0C3", "#B19CD9", "#AEC6CF", "#FDFD96"];
+    let colorIndex = 0;
+    let legendHTML = `<div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:20px;">`;
+
+    sortedMonths.forEach(month => {
+        const count = monthCounts[month];
+        const percentage = (count / totalAbsences) * 100;
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + percentage;
+        
+        const color = colors[colorIndex % colors.length];
+        
+        gradientParts.push(`${color} ${startAngle}% ${endAngle}%`);
+        
+        legendHTML += `
+            <div style="display:flex; align-items:center; gap:5px; font-size:0.95rem;">
+                <div style="width:15px; height:15px; background-color:${color}; border-radius:3px;"></div>
+                <span style="color:var(--text-color);">${month} (${count})</span>
+            </div>
+        `;
+        
+        currentAngle = endAngle;
+        colorIndex++;
+    });
+
+    const gradientString = gradientParts.join(", ");
+
+    let chartHTML = `
+        <div style="font-size: 1.1rem; text-align: center; margin-bottom: 20px; font-weight: bold; color: var(--text-color);">
+            توزيع غيابات التلاميذ حسب الشهور
+        </div>
+        <div style="display:flex; justify-content:center; margin-top: 10px;">
+            <div style="width: 220px; height: 220px; border-radius: 50%; background: conic-gradient(${gradientString}); box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
+        </div>
+        ${legendHTML}
+    `;
+
+    container.innerHTML = chartHTML;
+}
+
+window.exportAbsencesToWord = function() {
+    const feedback = document.createElement('div');
+    feedback.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2b579a; color:white; padding:15px 30px; border-radius:30px; z-index:99999; box-shadow:0 10px 25px rgba(0,0,0,0.2); font-family:Tajawal; font-weight:bold;";
+    feedback.innerText = "جاري تحضير ملف Word... يرجى الانتظار";
+    document.body.appendChild(feedback);
+
+    try {
+        const cls = appState.classes[currentActiveClassIndex];
+        if (!cls) throw new Error("يرجى اختيار قسم أولاً");
+
+        const info = appState.teacherInfo;
+        const trimName = ["الأول", "الثاني", "الثالث"][currentTrimester - 1] || currentTrimester;
+        const trimKey = `t${currentTrimester}`;
+        const academicYear = info.year || "2025 / 2026";
+
+        let studentsWithStats = cls.students
+            .filter(s => !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester))
+            .map(student => {
+                const absences = student.absenceData && student.absenceData[trimKey] ? Object.keys(student.absenceData[trimKey]) : [];
+                
+                const formattedDates = absences.sort().map(dateStr => {
+                    const d = new Date(dateStr);
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${year}-${month}-${day}`;
+                });
+
+                return {
+                    student: student,
+                    absencesCount: absences.length,
+                    absencesDates: formattedDates
+                };
+            })
+            .filter(item => item.absencesCount > 0);
+
+        if (absenceStatsSortColumn) {
+            studentsWithStats.sort((a, b) => {
+                if (absenceStatsSortColumn === 'name') {
+                    const nameA = (a.student.surname + " " + a.student.name).trim();
+                    const nameB = (b.student.surname + " " + b.student.name).trim();
+                    return absenceStatsSortDirection === 'asc' ? nameA.localeCompare(nameB, 'ar') : nameB.localeCompare(nameA, 'ar');
+                } else if (absenceStatsSortColumn === 'count') {
+                    return absenceStatsSortDirection === 'asc' ? a.absencesCount - b.absencesCount : b.absencesCount - a.absencesCount;
+                }
+                return 0;
+            });
+        }
+
+        const tableStyle = `
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px auto;
+            direction: rtl;
+            text-align: center;
+            border: 1px solid black;
+            font-size: 11pt;
+        `;
+
+        const thStyle = `
+            border: 1px solid #000;
+            padding: 8px 4px;
+            background-color: #f2f2f2;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        `;
+
+        const tdStyle = `
+            border: 1px solid #000;
+            padding: 6px 4px;
+            text-align: center;
+            vertical-align: middle;
+        `;
+
+        const tdNameStyle = `
+            border: 1px solid #000;
+            padding: 6px 4px;
+            text-align: right;
+            vertical-align: middle;
+            font-weight: bold;
+        `;
+
+        const tableHeadersHtml = `
+            <thead>
+                <tr>
+                    <th style="${thStyle} width: 40px;">الرقم</th>
+                    <th style="${thStyle} width: 250px;">اللقب و الاسم</th>
+                    <th style="${thStyle} width: 120px;">عدد مرات الغياب</th>
+                    <th style="${thStyle}">تواريخ الغياب</th>
+                </tr>
+            </thead>
+        `;
+
+        let rowsHtml = '';
+        if (studentsWithStats.length === 0) {
+            rowsHtml = `<tr><td colspan="4" style="${tdStyle}; font-weight:bold; height: 50px;">لا توجد غيابات مسجلة لهذا الفصل.</td></tr>`;
+        } else {
+            studentsWithStats.forEach((item, index) => {
+                rowsHtml += `
+                <tr>
+                    <td style="${tdStyle} font-weight: bold;">${index + 1}</td>
+                    <td style="${tdNameStyle}">${item.student.surname} ${item.student.name}</td>
+                    <td style="${tdStyle} font-weight: bold;">${item.absencesCount}</td>
+                    <td style="${tdStyle} font-size: 10pt;">${item.absencesDates.join(" ، ")}</td>
+                </tr>`;
+            });
+        }
+
+        const headerHtml = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <table align="center" style="border: 2px solid #2b579a; border-collapse: collapse; margin-bottom: 20px; max-width: 95%; margin-left: auto; margin-right: auto;">
+                    <tr>
+                        <td style="padding: 10px 20px; text-align: center;">
+                            <p style="margin: 0; font-size: 24pt; font-weight: bold; color: #2b579a; white-space: normal;">إحصائيات الغيابات</p>
+                        </td>
+                    </tr>
+                </table>
+                <p style="margin: 10px 0 0 0; font-size: 12pt;"><span style="font-weight: bold;">السنة الدراسية:</span> <span dir="rtl">${academicYear}</span></p>
+            </div>
+            
+            <table style="width: 100%; margin-bottom: 20px; font-size: 12pt; border: none;">
+                <tr>
+                    <td style="border: none; text-align: right; width: 33%; padding: 5px;"><b>الأستاذ(ة):</b> ${info.name || '---'}</td>
+                    <td style="border: none; text-align: center; width: 33%; padding: 5px;"><b>المؤسسة:</b> ${info.school || '---'}</td>
+                    <td style="border: none; text-align: left; width: 33%; padding: 5px;"><b>الفوج:</b> ${cls.name}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; text-align: right; padding: 5px;"><b>المادة:</b> ${cls.subject || info.subject || '---'}</td>
+                    <td style="border: none; text-align: center; padding: 5px;"><b>الفصل:</b> ${trimName}</td>
+                    <td style="border: none; text-align: left; padding: 5px;"><b>تعداد الغيابات:</b> ${studentsWithStats.length} تلميذ غائب</td>
+                </tr>
+            </table>
+        `;
+
+        const fullHtml = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>إحصائيات الغيابات</title>
+                <!-- Tajawal Font for Arabic Support -->
+                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 0.5in; 
+                        mso-header-margin: 0.5in;
+                        mso-footer-margin: 0.5in;
+                        mso-paper-source: 0;
+                    }
+                    div.Section1 {
+                        page: Section1;
+                    }
+                    body { 
+                        font-family: 'Tajawal', 'Arial', sans-serif; 
+                        direction: rtl; 
+                    }
+                </style>
+            </head>
+            <body style="tab-interval:.5in">
+                <div class="Section1">
+                    ${headerHtml}
+                    <table style="${tableStyle}">
+                        ${tableHeadersHtml}
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                    <br>
+                    <div style="float: left; text-align: left; margin-top: 20px;">
+                        <p style="font-size: 10pt; color: #666; margin: 0;">تم استخراج هذه الوثيقة بتاريخ: ${new Date().toLocaleDateString('ar-DZ')}</p>
+                        ${info.logo ? '<img src="' + info.logo + '" width="122" height="122" style="width: 3.24cm; height: 3.24cm; margin-top: 5px; mso-wrap-style: square; float: left;">' : ''}
+                    </div>
+                    <div style="clear: both;"></div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const safeClassName = cls.name.replace(/[\\/:*?"<>|]/g, "_");
+        const filename = `إحصائيات_الغيابات_${safeClassName}_الفصل_${trimName}.doc`;
+        
+        if (typeof showWordPreview === "function") {
+            showWordPreview(fullHtml, filename);
+        } else {
+            alert("وظيفة تصدير الوورد غير متوفرة حالياً.");
+        }
+
+        feedback.remove();
+    } catch (err) {
+        if (feedback) feedback.remove();
+        alert('حدث خطأ أثناء التصدير لـ Word: ' + err.message);
+    }
+};
 
