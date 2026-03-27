@@ -29,10 +29,17 @@ echo.
 :: === Step 1: Sync Web Assets ===
 echo [1/6] Syncing web assets...
 if not exist "www" mkdir "www"
+
+:: Ensure capacitor.js is present for the native bridge
+if exist "node_modules\@capacitor\core\dist\capacitor.js" (
+    copy /Y "node_modules\@capacitor\core\dist\capacitor.js" "capacitor.js" > nul 2>&1
+)
+
 xcopy /E /I /Y assets www\assets > nul 2>&1
 copy /Y index.html www\index.html > nul 2>&1
 copy /Y script.js www\script.js > nul 2>&1
 copy /Y style.css www\style.css > nul 2>&1
+copy /Y capacitor.js www\capacitor.js > nul 2>&1
 copy /Y activation-system.js www\activation-system.js > nul 2>&1
 echo [OK] Web assets ready.
 echo.

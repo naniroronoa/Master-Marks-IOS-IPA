@@ -124,6 +124,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderAcademicYearDropdown();
     renderHomeInputs();
+
+    // Update footer year display
+    const footerYear = document.getElementById('footer-year-display');
+    if (footerYear && allYearsData.currentYear) {
+        footerYear.textContent = allYearsData.currentYear;
+    }
+
     applySubjectTheme(); // Apply theme on load
     if (appState.classes.length > 0) {
         initClassTabs();
@@ -474,6 +481,12 @@ window.switchAcademicYear = function (yearName) {
     // Refresh UI
     renderHomeInputs();
     renderAcademicYearDropdown();
+
+    // Update footer year display on change
+    const footerYear = document.getElementById('footer-year-display');
+    if (footerYear && allYearsData.currentYear) {
+        footerYear.textContent = allYearsData.currentYear;
+    }
     currentActiveClassIndex = 0;
 
     // Reset specific submenus if open
@@ -1950,6 +1963,17 @@ function validateContinuousMark(type, subIndex, value) {
     return val >= 0 && val <= max;
 }
 
+// Helper to calculate automated absence score for Continuous Assessment
+function getCalculatedAbsenceScore(student, trimKey) {
+    const config = appState.continuousConfig || defaultContinuousConfig;
+    const maxScore = config.discipline[1].max; // "الغياب و التأخر" is usually index 1
+    const absenceCount = student.absenceData?.[trimKey] ? Object.keys(student.absenceData[trimKey]).length : 0;
+
+    if (absenceCount < 3) return maxScore;
+    if (absenceCount <= 6) return maxScore / 2;
+    return 0;
+}
+
 // --- قسم التقويم المستمر (CONTINUOUS ASSESSMENT) ---
 // Helper to robustly calculate total for Continuous Assessment (sums 10 columns)
 function calculateContinuousTotal(data) {
@@ -2049,7 +2073,8 @@ function renderContinuousTable() {
             const isInitiativeEmpty = data.outClass[2] === ''; // المبادرة هي الفهرس 2
 
             if (isDisciplineEmpty && prevData.discipline) {
-                data.discipline = [...prevData.discipline];
+                // Copy all except Absence and Tardiness (index 1)
+                data.discipline = prevData.discipline.map((val, idx) => idx === 1 ? '' : val);
             }
             if (isInClassEmpty && prevData.inClass) {
                 data.inClass = [...prevData.inClass];
@@ -2067,7 +2092,19 @@ function renderContinuousTable() {
 
         // الانضباط (4 أعمدة)
         for (let i = 0; i < 4; i++) {
-            const val = data.discipline?.[i] || '';
+            let val = data.discipline?.[i];
+
+            // التوزيع التلقائي لعلامة الغياب و التأخر (Index 1) إذا لم يكن هناك تعديل يدوي
+            if (i === 1) {
+                if (!data.isManualAbsence || val === undefined || val === null || val === '') {
+                    val = getCalculatedAbsenceScore(student, trimKey);
+                    data.discipline[i] = val.toString(); // Save to state silently
+                    if (val !== undefined && val !== null && val !== '') data.isManualAbsence = false; // Reset if it was empty
+                }
+            } else if (val === undefined || val === null) {
+                val = '';
+            }
+
             const displayVal = formatValueWithComma(val, -1);
             const isInvalid = !validateContinuousMark('discipline', i, val);
             if (isInvalid) { isRowInvalid = true; }
@@ -2149,7 +2186,7 @@ window.updateContinuous = function (classIndex, studentId, type, subIndex, eleme
     const internalValue = value.toString().replace(',', '.');
 
     const syncableFields = {
-        'discipline': [0, 1, 2, 3],
+        'discipline': [0, 2, 3], // Exclude index 1 (Absence and Tardiness)
         'inClass': [0, 1, 2],
         'outClass': [2]
     };
@@ -2157,20 +2194,40 @@ window.updateContinuous = function (classIndex, studentId, type, subIndex, eleme
     const trimKey = `t${currentTrimester}`;
     if (!student.continuousData[trimKey]) student.continuousData[trimKey] = { discipline: ['', '', '', ''], inClass: ['', '', ''], outClass: ['', '', ''] };
 
-    if (type === 'discipline') student.continuousData[trimKey].discipline[subIndex] = internalValue;
+    if (type === 'discipline') {
+        // If Absence score is edited, track as manual override
+        if (subIndex === 1) {
+            const calculated = getCalculatedAbsenceScore(student, trimKey);
+            // If cleared OR if the value entered matches the current automated calculation, treat as "Auto"
+            if (internalValue === '' || internalValue == calculated) {
+                student.continuousData[trimKey].discipline[subIndex] = calculated.toString();
+                student.continuousData[trimKey].isManualAbsence = false;
+                if (isElement) {
+                    elementOrValue.value = formatValueWithComma(calculated, -1);
+                }
+            } else {
+                // Manual entry is different from current calculation
+                student.continuousData[trimKey].discipline[subIndex] = internalValue;
+                student.continuousData[trimKey].isManualAbsence = true;
+            }
+        } else {
+            student.continuousData[trimKey].discipline[subIndex] = internalValue;
+        }
+    }
     else if (type === 'inClass') student.continuousData[trimKey].inClass[subIndex] = internalValue;
     else if (type === 'outClass') student.continuousData[trimKey].outClass[subIndex] = internalValue;
 
     // --- تحديث الفصول اللاحقة تلقائياً حسب طلب المستخدم ---
     if (syncableFields[type] && syncableFields[type].includes(subIndex)) {
+        const valToSync = student.continuousData[trimKey][type][subIndex]; // Get the value (potentially reverted)
         for (let t = currentTrimester + 1; t <= 3; t++) {
             const nextTrimKey = `t${t}`;
             if (!student.continuousData[nextTrimKey]) {
                 student.continuousData[nextTrimKey] = { discipline: ['', '', '', ''], inClass: ['', '', ''], outClass: ['', '', ''] };
             }
-            if (type === 'discipline') student.continuousData[nextTrimKey].discipline[subIndex] = value;
-            else if (type === 'inClass') student.continuousData[nextTrimKey].inClass[subIndex] = value;
-            else if (type === 'outClass') student.continuousData[nextTrimKey].outClass[subIndex] = value;
+            if (type === 'discipline') student.continuousData[nextTrimKey].discipline[subIndex] = valToSync;
+            else if (type === 'inClass') student.continuousData[nextTrimKey].inClass[subIndex] = valToSync;
+            else if (type === 'outClass') student.continuousData[nextTrimKey].outClass[subIndex] = valToSync;
         }
     }
 
@@ -2356,7 +2413,8 @@ function renderMonitoringTable() {
             // Format Mark column (index 3) specifically to e.g., 05,20
             const displayVal = i === 3 ? formatGradingVal(val) : ((val === 0 || val) ? val : '');
             const inputType = i === 3 ? 'text' : 'number';
-            const extraStyle = i === 3 ? 'style="min-width: 55px; width: 55px;"' : '';
+            const widths = ['70px', '70px', '80px', '75px'];
+            const extraStyle = `style="min-width: ${widths[i]}; width: ${widths[i]};"`;
 
             subCols += `<td><input type="${inputType}" ${i !== 3 ? 'step="0.5"' : ''} value="${displayVal}" class="${classes[i]}" oninput="updateMonitoring(${currentActiveClassIndex}, '${student.id}', 'homework', ${i}, this.value)" onpaste="handleTablePaste(event, 'monitoring')" data-student-id="${student.id}" data-field="homework" data-sub-index="${i}" ${readOnlyAttr} ${extraStyle}></td>`;
         }
@@ -2379,7 +2437,8 @@ function renderMonitoringTable() {
 
             const inputType = 'text'; // Using text for comma support
             const onInputLogic = (i === 0 || i === 1) ? "this.value = this.value.replace('.', ','); " : "";
-            const extraStyle = i === 2 ? 'style="min-width: 55px; width: 55px;"' : 'style="min-width: 45px; width: 45px;"';
+            const widths = ['90px', '90px', '75px'];
+            const extraStyle = `style="min-width: ${widths[i]}; width: ${widths[i]};"`;
 
             subCols += `<td><input type="${inputType}" value="${displayVal}" class="${classes[i]}" oninput="${onInputLogic}updateMonitoring(${currentActiveClassIndex}, '${student.id}', 'monthly', ${i}, this.value)" onpaste="handleTablePaste(event, 'monitoring')" data-student-id="${student.id}" data-field="monthly" data-sub-index="${i}" ${readOnlyAttr} ${extraStyle}></td>`;
         }
@@ -2817,13 +2876,13 @@ function renderGradingTable() {
 
         tr.innerHTML = `
             <td>${realCount}</td>
-            <td style="text-align:right; padding-right:1rem;"><strong>${student.surname}</strong> ${student.name}</td>
+            <td style="text-align:right; padding-right:1rem;">${student.surname} ${student.name}</td>
             <td class="${monErrorClass}"><input type="text" value="${formatGradingVal(displayMonitoring)}" placeholder="${formatGradingVal(getContinuousTotal(student, trimKey))}" onchange="updateGrade(${currentActiveClassIndex}, '${student.id}', 'monitoring', this.value)" onfocus="this.select()" onpaste="handleTablePaste(event, 'grading')" data-student-id="${student.id}" data-field="monitoring" ${readOnlyAttr} class="${monErrorClass} ${inputClass}"></td>
-            <td class="${assErrorClass}"><input type="text" class="${assErrorClass} ${inputClass}" value="${formatGradingVal(data.assignment)}" onchange="updateGrade(${currentActiveClassIndex}, '${student.id}', 'assignment', this.value)" onfocus="this.select()" onpaste="handleTablePaste(event, 'grading')" data-student-id="${student.id}" data-field="assignment" ${readOnlyAttr}></td>
-            <td class="bg-gray-50"><strong>${formatGradingVal(data.continuousEval)}</strong></td>
-            <td class="${examErrorClass}"><input type="text" class="${examErrorClass} ${inputClass}" value="${formatGradingVal(data.exam)}" onchange="updateGrade(${currentActiveClassIndex}, '${student.id}', 'exam', this.value)" onfocus="this.select()" onpaste="handleTablePaste(event, 'grading')" data-student-id="${student.id}" data-field="exam" ${readOnlyAttr}></td>
+            <td class="${assErrorClass}"><input type="text" class="${assErrorClass} ${inputClass}" style="font-weight: bold;" value="${formatGradingVal(data.assignment)}" onchange="updateGrade(${currentActiveClassIndex}, '${student.id}', 'assignment', this.value)" onfocus="this.select()" onpaste="handleTablePaste(event, 'grading')" data-student-id="${student.id}" data-field="assignment" ${readOnlyAttr}></td>
+            <td class="bg-gray-50">${formatGradingVal(data.continuousEval)}</td>
+            <td class="${examErrorClass}"><input type="text" class="${examErrorClass} ${inputClass}" style="font-weight: bold;" value="${formatGradingVal(data.exam)}" onchange="updateGrade(${currentActiveClassIndex}, '${student.id}', 'exam', this.value)" onfocus="this.select()" onpaste="handleTablePaste(event, 'grading')" data-student-id="${student.id}" data-field="exam" ${readOnlyAttr}></td>
             <td class="avg-cell ${avgClass}"><strong>${formatGradingVal(data.average)}</strong></td>
-            <td><strong>${formatGradingVal(data.score)}</strong></td>
+            <td>${formatGradingVal(data.score)}</td>
             ${annualAvgCell}
             <td class="appr-cell">
                 <input type="text" value="${data.appreciation || getAppreciation(data.average)}" 
@@ -3412,8 +3471,8 @@ function renderDetailedStats() {
             <thead>
                 <tr>
                     <th rowspan="2">القـيـاس</th>
-                    <th colspan="2">عدد المتحصلين على المعدل (>= 10)</th>
-                    <th colspan="2">عدد المتحصلين تحت المعدل (< 10)</th>
+                    <th colspan="2">عدد المتحصلين على معدل 10 فما فوق</th>
+                    <th colspan="2">عدد المتحصلين على معدل أقل من 10</th>
                 </tr>
                 <tr>
                     <th>العدد</th>
@@ -3862,8 +3921,8 @@ window.exportMonitoringToPDF = function () {
                     <th style="background: #f0f0f0;">أنجزت</th>
                     <th style="background: #f0f0f0;">لم تنجز</th>
                     <th style="background: #f0f0f0;">العلامة</th>
-                    <th style="background: #f0f0f0;">واجب 1</th>
-                    <th style="background: #f0f0f0;">واجب 2</th>
+                    <th style="background: #f0f0f0;">الواجب 01</th>
+                    <th style="background: #f0f0f0;">الواجب 02</th>
                     <th style="background: #f0f0f0;">العلامة</th>
                 </tr>
             </thead>
@@ -4070,45 +4129,37 @@ window.exportMonitoringToWord = function () {
             font-weight: bold;
         `;
 
-        const tableHeadersHtml = `
-            <thead>
-                <tr>
-                    <th rowspan="2" style="${thStyle} width: 40px;">رقم</th>
-                    <th rowspan="2" style="${thStyle} width: 120px;">اللقب</th>
-                    <th rowspan="2" style="${thStyle} width: 120px;">الاسم</th>
-                    <th rowspan="2" style="${thStyle} width: 70px;">الإنضباط</th>
-                    <th colspan="4" style="${thStyle}">الواجبات المنزلية</th>
-                    <th colspan="3" style="${thStyle}">الواجبات الشهرية</th>
-                </tr>
-                <tr>
-                    <th style="${thStyle}">إجمالي</th>
-                    <th style="${thStyle}">أنجزت</th>
-                    <th style="${thStyle}">لم تنجز</th>
-                    <th style="${thStyle}">العلامة</th>
-                    <th style="${thStyle}">واجب 1</th>
-                    <th style="${thStyle}">واجب 2</th>
-                    <th style="${thStyle}">العلامة</th>
-                </tr>
-            </thead>
-        `;
-
         let rowsHtml = '';
-        students.forEach((s, i) => {
+        students.forEach((s, idx) => {
             const d = (s.monitoringData && s.monitoringData[trimKey]) || { discipline: '', homework: ['', '', '', ''], monthly: ['', '', ''] };
+
+            // Format values with commas for consistency
+            const disc = formatValueWithComma(d.discipline, -1);
+            const hwTotal = formatValueWithComma(d.homework[0], -1);
+            const hwDone = formatValueWithComma(d.homework[1], -1);
+            const hwNotDone = formatValueWithComma(d.homework[2], -1);
+            const hwMark = formatValueWithComma(d.homework[3], 2);
+
+            // Marks in الواجب 01 and الواجب 02 should be plain numbers (no unnecessary zeros)
+            const m1 = formatValueWithComma(d.monthly[0], -1);
+            const m2 = formatValueWithComma(d.monthly[1], -1);
+            const mTotal = formatValueWithComma(d.monthly[2], 2);
+
             rowsHtml += `
-            <tr>
-                <td style="${tdStyle} font-weight: bold;">${i + 1}</td>
-                <td style="${tdNameStyle}">${s.surname || ''}</td>
-                <td style="${tdNameStyle.replace('font-weight: bold;', '')}">${s.name || ''}</td>
-                <td style="${tdStyle}">${formatValueWithComma(d.discipline)}</td>
-                <td style="${tdStyle}">${formatValueWithComma(d.homework?.[0], 0)}</td>
-                <td style="${tdStyle}">${formatValueWithComma(d.homework?.[1], 0)}</td>
-                <td style="${tdStyle}">${formatValueWithComma(d.homework?.[2], 0)}</td>
-                <td style="${tdStyle} font-weight: bold; background-color: #fafafa;">${formatValueWithComma(d.homework?.[3])}</td>
-                <td style="${tdStyle}">${formatValueWithComma(d.monthly?.[0], -1)}</td>
-                <td style="${tdStyle}">${formatValueWithComma(d.monthly?.[1], -1)}</td>
-                <td style="${tdStyle} font-weight: bold; background-color: #fafafa;">${formatValueWithComma(d.monthly?.[2])}</td>
-            </tr>`;
+                <tr>
+                    <td style="${tdStyle}">${idx + 1}</td>
+                    <td style="${tdNameStyle}">${s.surname || ''}</td>
+                    <td style="${tdNameStyle.replace('font-weight: bold;', '')}">${s.name || ''}</td>
+                    <td style="${tdStyle}">${disc}</td>
+                    <td style="${tdStyle}">${hwTotal}</td>
+                    <td style="${tdStyle} color: #28a745; font-weight: bold;">${hwDone}</td>
+                    <td style="${tdStyle} color: #dc3545; font-weight: bold;">${hwNotDone}</td>
+                    <td style="${tdStyle} font-weight: bold; background: #f9f9f9;">${hwMark}</td>
+                    <td style="${tdStyle}">${m1}</td>
+                    <td style="${tdStyle}">${m2}</td>
+                    <td style="${tdStyle} font-weight: bold; background: #f9f9f9;">${mTotal}</td>
+                </tr>
+            `;
         });
 
         const headerHtml = `
@@ -4123,7 +4174,7 @@ window.exportMonitoringToWord = function () {
                 <p style="margin: 10px 0 0 0; font-size: 12pt;"><span style="font-weight: bold;">السنة الدراسية:</span> <span dir="rtl">${info.year || '---'}</span></p>
             </div>
             
-            <table style="width: 100%; margin-bottom: 20px; font-size: 12pt; border: none;">
+            <table style="width: 100%; margin-bottom: 20px; font-size: 11pt; border: none; mso-table-lspace:0pt; mso-table-rspace:0pt;">
                 <tr>
                     <td style="border: none; text-align: right; width: 33%; padding: 5px;"><b>الأستاذ:</b> ${info.name || '---'}</td>
                     <td style="border: none; text-align: center; width: 33%; padding: 5px;"><b>المؤسسة:</b> ${info.school || '---'}</td>
@@ -4137,50 +4188,44 @@ window.exportMonitoringToWord = function () {
             </table>
         `;
 
+        const tableHtml = `
+            <table style="${tableStyle}">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="${thStyle} width: 40px;">رقم</th>
+                        <th rowspan="2" style="${thStyle} width: 120px;">اللقب</th>
+                        <th rowspan="2" style="${thStyle} width: 120px;">الاسم</th>
+                        <th rowspan="2" style="${thStyle} width: 70px;">الإنضباط</th>
+                        <th colspan="4" style="${thStyle}">الواجبات المنزلية</th>
+                        <th colspan="3" style="${thStyle}">الواجبات الشهرية</th>
+                    </tr>
+                    <tr>
+                        <th style="${thStyle}">إجمالي</th>
+                        <th style="${thStyle}">أنجزت</th>
+                        <th style="${thStyle}">لم تنجز</th>
+                        <th style="${thStyle}">العلامة</th>
+                        <th style="${thStyle}">الواجب 01</th>
+                        <th style="${thStyle}">الواجب 02</th>
+                        <th style="${thStyle}">العلامة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
+        `;
+
         const fullHtml = `
-            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head>
-                <meta charset='utf-8'>
-                <title>جدول مراقبة الأعمال</title>
-                <!-- Tajawal Font for Arabic Support -->
-                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>
-                    /* Narrow Margins: 0.5cm */
-                    /* Narrow Margins: 0.5in = 1.27cm, but using specific page directives for Word */
-                    @page {
-                        size: A4 portrait;
-                        margin: 0.5in; 
-                        mso-header-margin: 0.5in;
-                        mso-footer-margin: 0.5in;
-                        mso-paper-source: 0;
-                    }
-                    div.Section1 {
-                        page: Section1;
-                    }
-                    body { 
-                        font-family: 'Tajawal', 'Arial', sans-serif; 
-                        direction: rtl; 
-                    }
-                </style>
-            </head>
-            <body style="tab-interval:.5in">
-                <div class="Section1">
-                    ${headerHtml}
-                    <table style="${tableStyle}">
-                        ${tableHeadersHtml}
-                        <tbody>
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
-                    <br>
+            <div class="Section1">
+                ${headerHtml}
+                ${tableHtml}
+                <br>
                 <div style="float: left; text-align: left; margin-top: 20px;">
                     <p style="font-size: 10pt; color: #666; margin: 0;">تم استخراج هذا الجدول بتاريخ: ${new Date().toLocaleDateString('ar-DZ')}</p>
                     ${info.logo ? `<img src="${info.logo}" width="122" height="122" style="width: 3.24cm; height: 3.24cm; margin-top: 5px; mso-wrap-style: square; float: left;">` : ''}
                 </div>
                 <div style="clear: both;"></div>
-                </div>
-            </body>
-            </html>
+            </div>
         `;
 
         // Use Preview instead of immediate download
@@ -4240,14 +4285,18 @@ window.exportContinuousToWord = function () {
             text-align: center;
             vertical-align: middle;
             height: 155px;
+            mso-rotate: 90;
+            mso-vertical-align-alt: bottom;
         `;
 
         // Word processes text rotation at paragraph level, not cell level
         const verticalPStyle = `
             margin: 0;
             padding: 0;
+            mso-rotate: 90;
             layout-flow: vertical;
             mso-layout-flow-alt: bottom-to-top;
+            white-space: nowrap;
         `;
 
         const tdStyle = `
@@ -4281,20 +4330,20 @@ window.exportContinuousToWord = function () {
                 </tr>
                 <tr>
                     <!-- Discipline -->
-                    <th style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[0].label} (${config.discipline[0].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[1].label} (${config.discipline[1].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[2].label} (${config.discipline[2].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[3].label} (${config.discipline[3].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[0].label} (${config.discipline[0].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[1].label} (${config.discipline[1].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[2].label} (${config.discipline[2].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 5%;"><p style="${verticalPStyle}">${config.discipline[3].label} (${config.discipline[3].max} ن)</p></th>
                     
                     <!-- In-Class (Equal Width) -->
-                    <th style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.inClass[0].label} (${config.inClass[0].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.inClass[1].label} (${config.inClass[1].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.inClass[2].label} (${config.inClass[2].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.inClass[0].label} (${config.inClass[0].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.inClass[1].label} (${config.inClass[1].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.inClass[2].label} (${config.inClass[2].max} ن)</p></th>
                     
                     <!-- Out-Class (Equal Width) -->
-                    <th style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.outClass[0].label} (${config.outClass[0].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.outClass[1].label} (${config.outClass[1].max} ن)</p></th>
-                    <th style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.outClass[2].label} (${config.outClass[2].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.outClass[0].label} (${config.outClass[0].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.outClass[1].label} (${config.outClass[1].max} ن)</p></th>
+                    <th id="ca-header-discipline-0" class="vertical-text ca-header-editable" style="${verticalThStyle} width: 6%;"><p style="${verticalPStyle}">${config.outClass[2].label} (${config.outClass[2].max} ن)</p></th>
                 </tr>
             </thead>
         `;
@@ -4378,6 +4427,15 @@ window.exportContinuousToWord = function () {
                     body { 
                         font-family: 'Tajawal', 'Arial', sans-serif; 
                         direction: rtl; 
+                    }
+                    .vertical-text {
+                        mso-rotate: 90;
+                        layout-flow: vertical;
+                        mso-layout-flow-alt: bottom-to-top;
+                        writing-mode: vertical-rl;
+                        white-space: nowrap;
+                        height: 155px;
+                        vertical-align: middle;
                     }
                 </style>
             </head>
@@ -4482,17 +4540,17 @@ window.exportGradingToWord = function () {
         const tableHeadersHtml = `
             <thead>
                 <tr>
-                    <th style="${thStyle} width: 3%;">رقم</th>
-                    <th style="${thStyle} width: 20%;">اللقب والاسم</th>
-                    <th style="${thStyle} width: 8%;">التقويم المستمر</th>
-                    <th style="${thStyle} width: 8%;">الفرض</th>
-                    <th style="${thStyle} width: 8%;">المراقبة المستمرة</th>
-                    <th style="${thStyle} width: 8%;">الإختبار</th>
-                    <th style="${thStyle} width: 8%;">معدل المادة</th>
-                    <th style="${thStyle} width: 8%;">الحاصل</th>
-                    ${tri === 3 ? `<th style="${thStyle} width: 8%;">المعدل السنوي</th>` : ''}
-                    <th style="${thStyle} width: 24%;">التقديرات</th>
-                    <th style="${thStyle} width: 5%;">الرتبة</th>
+                    <th style="${thStyle} width: 3%; mso-line-height-rule: exactly;">رقم</th>
+                    <th style="${thStyle} width: 20%; mso-line-height-rule: exactly;">اللقب والاسم</th>
+                    <th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">التقويم المستمر</th>
+                    <th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">الفرض</th>
+                    <th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">المراقبة المستمرة</th>
+                    <th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">الإختبار</th>
+                    <th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">معدل المادة</th>
+                    <th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">الحاصل</th>
+                    ${tri === 3 ? `<th style="${thStyle} width: 8%; mso-line-height-rule: exactly;">المعدل السنوي</th>` : ''}
+                    <th style="${thStyle} width: 24%; mso-line-height-rule: exactly;">التقديرات</th>
+                    <th style="${thStyle} width: 5%; mso-line-height-rule: exactly;">الرتبة</th>
                 </tr>
             </thead>
         `;
@@ -4505,6 +4563,17 @@ window.exportGradingToWord = function () {
             // Re-calculate to be sure
             calculateStudentGrades(s, cls.coefficient, trimKey);
 
+            // Conditional Coloring
+            const getColor = (val) => {
+                const v = parseFloat(val);
+                if (isNaN(v) || v <= 0) return '#000000';
+                if (v < 8) return '#dc3545';   // Red
+                if (v < 10) return '#fb923c';  // Orange
+                return '#28a745';              // Green
+            };
+
+            const avgColor = getColor(data.average);
+
             // Annual Average for T3
             let annualAvgCell = '';
             if (tri === 3) {
@@ -4513,18 +4582,19 @@ window.exportGradingToWord = function () {
                 const a3 = parseFloat(s.gradingData['t3']?.average) || 0;
                 const annAvg = (a1 + a2 + a3) / 3;
                 const annAvgStr = (a1 > 0 || a2 > 0 || a3 > 0) ? formatGradingVal(annAvg) : '-';
-                annualAvgCell = `<td style="${tdStyle} font-weight: bold; background-color: #fafafa;">${annAvgStr}</td>`;
+                const annAvgColor = getColor(annAvg);
+                annualAvgCell = `<td style="${tdStyle} font-weight: bold; background-color: #fafafa; color: ${annAvgColor};">${annAvgStr}</td>`;
             }
 
             rowsHtml += `
             <tr>
                 <td style="${tdStyle} font-weight: bold;">${i + 1}</td>
-                <td style="${tdNameStyle}"><strong>${s.surname || ''}</strong> ${s.name || ''}</td>
+                <td style="${tdNameStyle}">${s.surname || ''} ${s.name || ''}</td>
                 <td style="${tdStyle}">${formatGradingVal(displayMonitoring)}</td>
-                <td style="${tdStyle}">${formatGradingVal(data.assignment)}</td>
-                <td style="${tdStyle} font-weight: bold; background-color: #fafafa;">${formatGradingVal(data.continuousEval)}</td>
-                <td style="${tdStyle}">${formatGradingVal(data.exam)}</td>
-                <td style="${tdStyle} font-weight: bold; background-color: #fafafa;">${formatGradingVal(data.average)}</td>
+                <td style="${tdStyle} font-weight: bold;">${formatGradingVal(data.assignment)}</td>
+                <td style="${tdStyle}">${formatGradingVal(data.continuousEval)}</td>
+                <td style="${tdStyle} font-weight: bold;">${formatGradingVal(data.exam)}</td>
+                <td style="${tdStyle} font-weight: bold; background-color: #fafafa; color: ${avgColor};">${formatGradingVal(data.average)}</td>
                 <td style="${tdStyle}">${formatGradingVal(data.score)}</td>
                 ${annualAvgCell}
                 <td style="${tdStyle}">${data.appreciation || getAppreciation(data.average)}</td>
@@ -4544,7 +4614,7 @@ window.exportGradingToWord = function () {
                 <p style="margin: 10px 0 0 0; font-size: 12pt;"><span style="font-weight: bold;">السنة الدراسية:</span> <span dir="rtl">${info.year || '---'}</span></p>
             </div>
             
-            <table style="width: 100%; margin-bottom: 20px; font-size: 11pt; border: none;">
+            <table style="width: 100%; margin-bottom: 20px; font-size: 11pt; border: none; mso-table-lspace:0pt; mso-table-rspace:0pt;">
                 <tr>
                     <td style="border: none; text-align: right; width: 33%; padding: 5px;"><b>الأستاذ:</b> ${info.name || '---'}</td>
                     <td style="border: none; text-align: center; width: 33%; padding: 5px;"><b>المؤسسة:</b> ${info.school || '---'}</td>
@@ -4784,8 +4854,8 @@ window.exportStatsToWord = function () {
                 <thead>
                     <tr>
                         <th rowspan="2" style="${thStyle}">القـيـاس</th>
-                        <th colspan="2" style="${thStyle}">عدد المتحصلين على المعدل (&gt;= 10)</th>
-                        <th colspan="2" style="${thStyle}">عدد المتحصلين تحت المعدل (&lt; 10)</th>
+                        <th colspan="2" style="${thStyle}">عدد المتحصلين على معدل 10 فما فوق
+                        <th colspan="2" style="${thStyle}">عدد المتحصلين على معدل أقل من 10</th>
                     </tr>
                     <tr>
                         <th style="${thStyle}">العدد</th>
@@ -5037,12 +5107,21 @@ window.exportStudentListToWord = function () {
         // 2. Student List Table
         let studentRows = '';
         students.forEach((s, index) => {
+            let dobFormatted = '---';
+            if (s.dob && s.dob !== '---') {
+                const parts = s.dob.split('-');
+                if (parts.length === 3) {
+                    dobFormatted = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                } else {
+                    dobFormatted = s.dob;
+                }
+            }
             studentRows += `
                 <tr>
                     <td style="${tdStyle} width: 10%; font-weight: bold;">${index + 1}</td>
                     <td style="${tdStyle} width: 35%; text-align: right; padding-right: 15px;">${s.surname}</td>
                     <td style="${tdStyle} width: 35%; text-align: right; padding-right: 15px;">${s.name}</td>
-                    <td style="${tdStyle} width: 20%;">${s.dob || '---'}</td>
+                    <td style="${tdStyle} width: 20%;">${dobFormatted}</td>
                 </tr>
             `;
         });
@@ -5631,32 +5710,127 @@ function sanitizeHtmlForWord(htmlString) {
     // 1. Get the core content (Section1 or Body)
     const content = doc.querySelector('.Section1') || doc.body;
 
-    // 2. Deep clean the HTML
+    // 2. Intelligent border handling via DOM manipulation (replacing aggressive regex)
+    const tables = content.querySelectorAll('table');
+    tables.forEach(table => {
+        const hasNoBorder = table.style.border === 'none' || table.getAttribute('border') === '0' || table.classList.contains('no-border');
+
+        if (hasNoBorder) {
+            table.setAttribute('border', '0');
+            table.style.border = 'none';
+        } else {
+            table.setAttribute('border', '1');
+            table.setAttribute('cellspacing', '0');
+            table.setAttribute('cellpadding', '5');
+            table.style.borderCollapse = 'collapse';
+            table.style.width = '100%';
+            if (!table.style.border || table.style.border === '') {
+                table.style.border = '1px solid #000';
+            }
+            table.style.direction = 'rtl';
+        }
+    });
+
+    const ths = content.querySelectorAll('th');
+    ths.forEach(th => {
+        // Standard headers
+        th.style.border = th.style.border || '1px solid #000';
+        th.style.backgroundColor = th.style.backgroundColor || '#f2f2f2';
+        th.style.fontWeight = 'bold';
+        th.style.msoLineHeightRule = 'exactly';
+
+        // Robustly preserve vertical text properties (mso-rotate, layout-flow, writing-mode)
+        const stylesToPreserve = ['height', 'mso-rotate', 'mso-vertical-align-alt', 'layout-flow', 'mso-layout-flow-alt', 'writing-mode'];
+        stylesToPreserve.forEach(prop => {
+            const val = th.style.getPropertyValue(prop);
+            if (val) th.style.setProperty(prop, val);
+        });
+    });
+
+    const tds = content.querySelectorAll('td');
+    tds.forEach(td => {
+        // If the cell is inside a table that was supposed to be borderless
+        const parentTable = td.closest('table');
+        const isBorderless = parentTable && (parentTable.style.border === 'none' || parentTable.getAttribute('border') === '0');
+
+        if (isBorderless || td.style.border === 'none') {
+            td.style.border = 'none';
+        } else {
+            td.style.border = td.style.border || '1px solid #000';
+        }
+        td.style.msoLineHeightRule = 'exactly';
+
+        // Preserve color and background (important for red/green and shading)
+        const stylesToPreserve = ['color', 'background', 'background-color', 'mso-rotate', 'writing-mode'];
+        stylesToPreserve.forEach(prop => {
+            const val = td.style.getPropertyValue(prop);
+            if (val) td.style.setProperty(prop, val);
+        });
+    });
+
+    // Also preserve styles for any elements inside cells (like the rotated <p> or <div>)
+    const subElements = content.querySelectorAll('th *, td *');
+    subElements.forEach(el => {
+        const stylesToPreserve = ['mso-rotate', 'layout-flow', 'mso-layout-flow-alt', 'writing-mode', 'white-space'];
+        stylesToPreserve.forEach(prop => {
+            const val = el.style.getPropertyValue(prop);
+            if (val) el.style.setProperty(prop, val);
+        });
+    });
+
+    // 3. Return a robust HTML structure
     let htmlContent = content.innerHTML;
-    
-    // Remove scripts, comments, and non-Word-friendly tags
+
+    // Final cleanup of redundant script tags/comments
     htmlContent = htmlContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     htmlContent = htmlContent.replace(/<!--[\s\S]*?-->/g, '');
-    
-    // Ensure all tables have explicit borders and width for Word
-    htmlContent = htmlContent.replace(/<table/gi, '<table border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; width: 100%; border: 1px solid #000; direction: rtl;"');
-    htmlContent = htmlContent.replace(/<th/gi, '<th style="border: 1px solid #000; background-color: #f2f2f2; font-weight: bold;"');
-    htmlContent = htmlContent.replace(/<td/gi, '<td style="border: 1px solid #000;"');
 
-    // 3. Return a minimal, valid HTML structure that html-docx-js likes
-    return `<!DOCTYPE html>
-<html>
+    return `
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
     <meta charset="UTF-8">
+    <!--[if gte mso 9]>
+    <xml>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
     <style>
-        body { font-family: 'Arial', sans-serif; direction: rtl; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid black; padding: 5px; text-align: center; }
-        .title { font-size: 18pt; font-weight: bold; text-align: center; }
+        @page Section1 {
+            size: 21.0cm 29.7cm;
+            margin: 0.76cm 0.76cm 0.76cm 0.76cm; /* 0.3in = Narrow Margins for iPad */
+            mso-header-margin: 0.76cm;
+            mso-footer-margin: 0.76cm;
+            mso-paper-source: 0;
+        }
+        div.Section1 { page: Section1; }
+        body { 
+            font-family: 'Tajawal', 'Arial', sans-serif; 
+            direction: rtl; 
+            margin: 0;
+            padding: 0;
+        }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            mso-table-lspace: 0pt; 
+            mso-table-rspace: 0pt; 
+        }
+        th, td { 
+            padding: 5px; 
+            text-align: center; 
+        }
     </style>
 </head>
 <body dir="rtl">
-    ${htmlContent}
+    <div class="Section1">
+        ${htmlContent}
+    </div>
 </body>
 </html>`;
 }
@@ -5691,7 +5865,7 @@ window.executeWordDownload = async function () {
                 // Convert to real .docx using html-docx-js
                 const docxBlob = htmlDocx.asBlob(sanitizedHtml);
                 const base64Data = await blobToBase64(docxBlob);
-                
+
                 // Force .docx extension for modern Word compatibility
                 let finalFilename = filename;
                 if (!finalFilename.toLowerCase().endsWith('.docx')) {
@@ -5871,32 +6045,32 @@ window.toggleSidebar = function () {
 function initSidebarGestures() {
     const floatingBtn = document.getElementById('floating-sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
-    
+
     // 1. Swipe left on "Show Menu" button to open
     let floatStartX = 0;
     if (floatingBtn) {
         floatingBtn.addEventListener('touchstart', e => {
             floatStartX = e.changedTouches[0].screenX;
         }, { passive: true });
-        
+
         floatingBtn.addEventListener('touchend', e => {
             let floatEndX = e.changedTouches[0].screenX;
             // Swipe Left (X decreases) -> open sidebar
-            if (floatStartX - floatEndX > 40) { 
+            if (floatStartX - floatEndX > 40) {
                 if (document.body.classList.contains('sidebar-collapsed')) {
                     toggleSidebar();
                 }
             }
         }, { passive: true });
     }
-    
+
     // 2. Swipe right inside the sidebar to close
     let sidebarStartX = 0;
     if (sidebar) {
         sidebar.addEventListener('touchstart', e => {
             sidebarStartX = e.changedTouches[0].screenX;
         }, { passive: true });
-        
+
         sidebar.addEventListener('touchend', e => {
             let sidebarEndX = e.changedTouches[0].screenX;
             // Swipe Right (X increases) -> close sidebar
@@ -6180,7 +6354,7 @@ function renderAbsencesSection() {
     // إذا كان التاريخ المعروض حالياً خارج شهور الفصل، نضبطه على الشهر الأول للفصل
     const currentMonth = calendarViewDate.getMonth();
     const currentYear = calendarViewDate.getFullYear();
-    
+
     let isOutOfRange = false;
     if (currentTrimester === 1 && (currentYear !== startYear || currentMonth < 8)) isOutOfRange = true;
     if (currentTrimester === 2 && (currentYear !== endYear || currentMonth > 2)) isOutOfRange = true;
@@ -6193,7 +6367,7 @@ function renderAbsencesSection() {
     renderAbsencesCalendar();
     renderAbsenceStudentList();
     renderAbsenceStats();
-    
+
     document.getElementById("absences-stats-trimester").textContent = currentTrimester;
 }
 
@@ -6235,7 +6409,7 @@ function renderAbsencesCalendar() {
         if (dateStr === currentAbsenceDate) dayCell.classList.add("selected");
         if (dateStr === new Date().toISOString().split("T")[0]) dayCell.classList.add("today");
 
-        const hasAbsences = currentClass && currentClass.students.some(s => 
+        const hasAbsences = currentClass && currentClass.students.some(s =>
             s.absenceData && s.absenceData[trimKey] && s.absenceData[trimKey][dateStr]
         );
         if (hasAbsences) dayCell.classList.add("has-absences");
@@ -6245,7 +6419,7 @@ function renderAbsencesCalendar() {
     }
 }
 
-window.changeAbsenceMonth = function(offset) {
+window.changeAbsenceMonth = function (offset) {
     const tempDate = new Date(calendarViewDate);
     tempDate.setMonth(tempDate.getMonth() + offset);
     const month = tempDate.getMonth();
@@ -6270,7 +6444,7 @@ window.changeAbsenceMonth = function(offset) {
     renderAbsencesCalendar();
 };
 
-window.selectAbsenceDate = function(dateStr) {
+window.selectAbsenceDate = function (dateStr) {
     currentAbsenceDate = dateStr;
     const dateLabel = document.getElementById("selected-absence-date");
     if (dateLabel) {
@@ -6283,13 +6457,13 @@ window.selectAbsenceDate = function(dateStr) {
     }
     renderAbsencesCalendar();
     renderAbsenceStudentList();
-    
+
     // إظهار النافذة المنبثقة
     const modal = document.getElementById("absences-list-modal");
     if (modal) modal.classList.add("open");
 };
 
-window.closeAbsencesListModal = function() {
+window.closeAbsencesListModal = function () {
     const modal = document.getElementById("absences-list-modal");
     if (modal) modal.classList.remove("open");
 };
@@ -6303,7 +6477,7 @@ function renderAbsenceStudentList() {
     if (!currentClass) return;
 
     const trimKey = `t${currentTrimester}`;
-    const filteredStudents = currentClass.students.filter(s => 
+    const filteredStudents = currentClass.students.filter(s =>
         !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester)
     );
 
@@ -6325,7 +6499,7 @@ function renderAbsenceStudentList() {
     });
 }
 
-window.toggleAbsence = function(studentId) {
+window.toggleAbsence = function (studentId) {
     const currentClass = appState.classes[currentActiveClassIndex];
     if (!currentClass) return;
     const student = currentClass.students.find(s => s.id === studentId);
@@ -6342,6 +6516,26 @@ window.toggleAbsence = function(studentId) {
     }
 
     saveAppState(true);
+
+    // --- تحديث علامة الغياب في التقويم المستمر آنياً ---
+    if (!student.continuousData) student.continuousData = createEmptyContinuousData();
+    if (!student.continuousData[trimKey]) {
+        student.continuousData[trimKey] = { discipline: ['', '', '', ''], inClass: ['', '', ''], outClass: ['', '', ''] };
+    }
+    const contData = student.continuousData[trimKey];
+    if (!contData.isManualAbsence) {
+        const calculated = getCalculatedAbsenceScore(student, trimKey);
+        contData.discipline[1] = calculated.toString();
+        // Silent save of calculated score
+        saveAppState(true);
+    }
+
+    // Refresh Continuous Table if it's currently showing to ensure "انية" updates
+    const contSection = document.getElementById('continuous-section');
+    if (contSection && !contSection.classList.contains('hidden')) {
+        renderContinuousTable();
+    }
+
     renderAbsencesCalendar();
     renderAbsenceStudentList();
     renderAbsenceStats();
@@ -6350,7 +6544,7 @@ window.toggleAbsence = function(studentId) {
 let absenceStatsSortColumn = null;
 let absenceStatsSortDirection = 'asc';
 
-window.sortAbsenceStats = function(column) {
+window.sortAbsenceStats = function (column) {
     if (column === 'name') {
         absenceStatsSortColumn = 'name';
         absenceStatsSortDirection = 'asc';
@@ -6362,10 +6556,10 @@ window.sortAbsenceStats = function(column) {
             absenceStatsSortDirection = 'desc';
         }
     }
-    
+
     const nameHeader = document.getElementById("th-absences-name");
     const countHeader = document.getElementById("th-absences-count");
-    
+
     if (nameHeader) {
         let icon = '<i class="fas fa-sort" style="opacity:0.3"></i>';
         if (absenceStatsSortColumn === 'name') {
@@ -6373,7 +6567,7 @@ window.sortAbsenceStats = function(column) {
         }
         nameHeader.innerHTML = `اللقب و الاسم ${icon}`;
     }
-    
+
     if (countHeader) {
         let icon = '<i class="fas fa-sort" style="opacity:0.3"></i>';
         if (absenceStatsSortColumn === 'count') {
@@ -6446,13 +6640,13 @@ function renderAbsenceStats() {
     }
 }
 
-window.openAbsencesStatsModal = function() {
+window.openAbsencesStatsModal = function () {
     const modal = document.getElementById("absences-stats-modal");
     if (modal) {
         const tableView = document.getElementById("absences-stats-table-view");
         const chartView = document.getElementById("absences-stats-chart-view");
         const btn = document.getElementById("btn-toggle-chart");
-        
+
         if (tableView && chartView) {
             tableView.classList.remove("hidden");
             chartView.classList.add("hidden");
@@ -6463,28 +6657,28 @@ window.openAbsencesStatsModal = function() {
                 btn.innerHTML = '<i class="fas fa-chart-pie"></i> تحليل النتائج';
             }
         }
-        
+
         modal.classList.add("open");
     }
 };
 
-window.closeAbsencesStatsModal = function() {
+window.closeAbsencesStatsModal = function () {
     const modal = document.getElementById("absences-stats-modal");
     if (modal) modal.classList.remove("open");
 };
 
-window.toggleAbsencesChart = function() {
+window.toggleAbsencesChart = function () {
     const tableView = document.getElementById("absences-stats-table-view");
     const chartView = document.getElementById("absences-stats-chart-view");
     const btn = document.getElementById("btn-toggle-chart");
-    
+
     if (tableView && chartView) {
         if (chartView.style.display !== "block") {
             tableView.classList.add("hidden");
             chartView.classList.remove("hidden");
             tableView.style.display = "none";
             chartView.style.display = "block";
-            
+
             if (btn) {
                 btn.classList.remove("btn-primary");
                 btn.classList.add("btn-danger");
@@ -6497,7 +6691,7 @@ window.toggleAbsencesChart = function() {
             tableView.classList.remove("hidden");
             chartView.style.display = "none";
             tableView.style.display = "block";
-            
+
             if (btn) {
                 btn.style.backgroundColor = "";
                 btn.classList.remove("btn-danger");
@@ -6517,7 +6711,7 @@ function buildAbsencesChart() {
     if (!currentClass) return;
 
     const trimKey = `t${currentTrimester}`;
-    const filteredStudents = currentClass.students.filter(s => 
+    const filteredStudents = currentClass.students.filter(s =>
         !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester)
     );
 
@@ -6558,18 +6752,18 @@ function buildAbsencesChart() {
         const percentage = (count / totalAbsences) * 100;
         const startAngle = currentAngle;
         const endAngle = currentAngle + percentage;
-        
+
         const color = colors[colorIndex % colors.length];
-        
+
         gradientParts.push(`${color} ${startAngle}% ${endAngle}%`);
-        
+
         legendHTML += `
             <div style="display:flex; align-items:center; gap:5px; font-size:0.95rem;">
                 <div style="width:15px; height:15px; background-color:${color}; border-radius:3px;"></div>
                 <span style="color:var(--text-color);">${month} (${count})</span>
             </div>
         `;
-        
+
         currentAngle = endAngle;
         colorIndex++;
     });
@@ -6589,7 +6783,7 @@ function buildAbsencesChart() {
     container.innerHTML = chartHTML;
 }
 
-window.exportAbsencesToWord = function() {
+window.exportAbsencesToWord = function () {
     const feedback = document.createElement('div');
     feedback.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2b579a; color:white; padding:15px 30px; border-radius:30px; z-index:99999; box-shadow:0 10px 25px rgba(0,0,0,0.2); font-family:Tajawal; font-weight:bold;";
     feedback.innerText = "جاري تحضير ملف Word... يرجى الانتظار";
@@ -6608,7 +6802,7 @@ window.exportAbsencesToWord = function() {
             .filter(s => !s.activeTrimesters || s.activeTrimesters.includes(currentTrimester))
             .map(student => {
                 const absences = student.absenceData && student.absenceData[trimKey] ? Object.keys(student.absenceData[trimKey]) : [];
-                
+
                 const formattedDates = absences.sort().map(dateStr => {
                     const d = new Date(dateStr);
                     const day = String(d.getDate()).padStart(2, '0');
@@ -6675,10 +6869,10 @@ window.exportAbsencesToWord = function() {
         const tableHeadersHtml = `
             <thead>
                 <tr>
-                    <th style="${thStyle} width: 40px;">الرقم</th>
-                    <th style="${thStyle} width: 250px;">اللقب و الاسم</th>
-                    <th style="${thStyle} width: 120px;">عدد مرات الغياب</th>
-                    <th style="${thStyle}">تواريخ الغياب</th>
+                    <th style="${thStyle} width: 40px; mso-line-height-rule: exactly;">الرقم</th>
+                    <th style="${thStyle} width: 250px; mso-line-height-rule: exactly;">اللقب و الاسم</th>
+                    <th style="${thStyle} width: 120px; mso-line-height-rule: exactly;">عدد مرات الغياب</th>
+                    <th style="${thStyle}; mso-line-height-rule: exactly;">تواريخ الغياب</th>
                 </tr>
             </thead>
         `;
@@ -6751,6 +6945,7 @@ window.exportAbsencesToWord = function() {
             <body style="tab-interval:.5in">
                 <div class="Section1">
                     ${headerHtml}
+                    <p style="margin:0; height:0; line-height:0; font-size:1pt;">&nbsp;</p>
                     <table style="${tableStyle}">
                         ${tableHeadersHtml}
                         <tbody>
@@ -6770,7 +6965,7 @@ window.exportAbsencesToWord = function() {
 
         const safeClassName = cls.name.replace(/[\\/:*?"<>|]/g, "_");
         const filename = `إحصائيات_الغيابات_${safeClassName}_الفصل_${trimName}.doc`;
-        
+
         if (typeof showWordPreview === "function") {
             showWordPreview(fullHtml, filename);
         } else {

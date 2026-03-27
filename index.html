@@ -28,10 +28,20 @@
             <div class="splash-orb splash-orb-1"></div>
             <div class="splash-orb splash-orb-2"></div>
             <div class="splash-orb splash-orb-3"></div>
-            <div class="splash-floating-icon"><i class="fas fa-book-open"></i></div>
-            <div class="splash-floating-icon"><i class="fas fa-graduation-cap"></i></div>
-            <div class="splash-floating-icon"><i class="fas fa-star"></i></div>
-            <div class="splash-floating-icon"><i class="fas fa-pencil-alt"></i></div>
+            
+            <!-- Education/Subject Icons - Left Side -->
+            <div class="splash-floating-icon icon-l-1"><i class="fas fa-book"></i></div>
+            <div class="splash-floating-icon icon-l-2"><i class="fas fa-calculator"></i></div>
+            <div class="splash-floating-icon icon-l-3"><i class="fas fa-microscope"></i></div>
+            <div class="splash-floating-icon icon-l-4"><i class="fas fa-atom"></i></div>
+            <div class="splash-floating-icon icon-l-5"><i class="fas fa-pen-nib"></i></div>
+            
+            <!-- Education/Subject Icons - Right Side -->
+            <div class="splash-floating-icon icon-r-1"><i class="fas fa-graduation-cap"></i></div>
+            <div class="splash-floating-icon icon-r-2"><i class="fas fa-globe-africa"></i></div>
+            <div class="splash-floating-icon icon-r-3"><i class="fas fa-compass"></i></div>
+            <div class="splash-floating-icon icon-r-4"><i class="fas fa-flask"></i></div>
+            <div class="splash-floating-icon icon-r-5"><i class="fas fa-palette"></i></div>
         </div>
 
         <div class="splash-content">
@@ -64,7 +74,7 @@
                 </div>
             </div>
 
-            <p class="splash-footer">الإصدار 1.0 &mdash; حقوق النشر &copy; 2025 - 2026</p>
+            <p class="splash-footer">الإصدار 1.1 &mdash; حقوق النشر &copy; <span id="footer-year-display">2025 - 2026</span></p>
         </div>
     </div>
 
@@ -236,8 +246,8 @@
             </nav>
             <div class="footer-info">
                 <div class="social-links">
-                    <a href="mailto:professor.tlili@gmail.com" target="_blank"
-                        title="إرسال إيميل"><i class="fas fa-envelope"></i></a>
+                    <a href="mailto:professor.tlili@gmail.com" target="_blank" title="إرسال إيميل"><i
+                            class="fas fa-envelope"></i></a>
                     <a href="https://www.facebook.com/TLILIProfessor/" target="_blank" title="Facebook"><i
                             class="fab fa-facebook"></i></a>
                     <a href="https://www.instagram.com/pr_tlili/" target="_blank" title="Instagram"><i
@@ -740,13 +750,20 @@
                                     <th colspan="3" style="width: auto;">الواجبات الشهرية</th>
                                 </tr>
                                 <tr>
-                                    <th style="width: auto; font-size: 0.9rem;">إجمالي</th>
-                                    <th style="width: auto; font-size: 0.9rem;">أنجزت</th>
-                                    <th style="width: auto; font-size: 0.9rem;">لم تنجز</th>
-                                    <th style="width: auto; font-size: 0.9rem;">العلامة</th>
-                                    <th style="width: auto; font-size: 0.9rem;">الواجب 01</th>
-                                    <th style="width: auto; font-size: 0.9rem;">الواجب 02</th>
-                                    <th style="width: auto; font-size: 0.9rem;">العلامة</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 70px;">
+                                        إجمالي</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 70px;">
+                                        أنجزت</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 80px;">لم
+                                        تنجز</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 75px;">
+                                        العلامة</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 90px;">
+                                        الواجب 01</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 90px;">
+                                        الواجب 02</th>
+                                    <th style="width: auto; font-size: 0.9rem; white-space: nowrap; min-width: 75px;">
+                                        العلامة</th>
                                 </tr>
                             </thead>
                             <tbody id="monitoringBody">
@@ -1420,7 +1437,7 @@
     <!-- Word Preview Modal -->
     <div id="word-preview-modal" class="modal-overlay">
         <div class="modal-content stats-modal-content word-preview-modal-content">
-            <div class="header-card continuous-header" style="margin-bottom: 1rem; padding: 1.5rem;">
+            <div class="header-card continuous-header" style="margin-bottom: 1rem; padding: 2rem;">
                 <div class="theme-decorations header-decorations"></div>
                 <h2
                     style="margin:-17px; color:white; display:flex; align-items:center; gap:0.5rem; justify-content:center;">
